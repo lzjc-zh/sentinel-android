@@ -10,5 +10,8 @@ enum class Platform(val displayName: String, val key: String) {
     companion object {
         fun fromKey(key: String): Platform =
             entries.find { it.key == key } ?: DEEPSEEK
+
+        const val PREF_KEY = "current_platform"
+        const val PREF_FIRST_LAUNCH = "first_launch_done"
     }
 }

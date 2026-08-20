@@ -77,13 +77,38 @@ class DashboardViewModel @Inject constructor(
     private val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
 
     init {
-        // Load saved platform preference
-        val savedPlatform = Platform.fromKey(prefs.getString("current_platform", "deepseek") ?: "deepseek")
-
         viewModelScope.launch {
-            // Check MiMo login state
+            // Check credential availability
             val mimoLoggedIn = mimoRepository.isLoggedIn()
-            _state.update { it.copy(currentPlatform = savedPlatform, mimoLoggedIn = mimoLoggedIn) }
+            val hasDeepSeekKey = repository.apiKey.first().isNotBlank()
+
+            // Auto-select platform: prefer saved choice, fallback to whichever has credentials
+            val isFirstLaunch = !prefs.getBoolean(Platform.PREF_FIRST_LAUNCH, false)
+            val platform = if (isFirstLaunch) {
+                // First launch: auto-detect, prefer MiMo if logged in
+                when {
+                    mimoLoggedIn -> Platform.MIMO
+                    hasDeepSeekKey -> Platform.DEEPSEEK
+                    else -> Platform.MIMO  // default to MiMo login prompt
+                }.also {
+                    prefs.edit()
+                        .putString(Platform.PREF_KEY, it.key)
+                        .putBoolean(Platform.PREF_FIRST_LAUNCH, true)
+                        .apply()
+                }
+            } else {
+                val saved = Platform.fromKey(prefs.getString(Platform.PREF_KEY, "deepseek") ?: "deepseek")
+                // If saved platform has no credentials, try the other one
+                when {
+                    saved == Platform.DEEPSEEK && hasDeepSeekKey -> saved
+                    saved == Platform.MIMO && mimoLoggedIn -> saved
+                    mimoLoggedIn -> Platform.MIMO
+                    hasDeepSeekKey -> Platform.DEEPSEEK
+                    else -> saved  // show login/empty state for saved platform
+                }
+            }
+
+            _state.update { it.copy(currentPlatform = platform, mimoLoggedIn = mimoLoggedIn) }
 
             combine(repository.apiKey, repository.userToken) { key, token -> key to token }
                 .distinctUntilChanged()
@@ -112,7 +137,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun switchPlatform(platform: Platform) {
-        prefs.edit().putString("current_platform", platform.key).apply()
+        prefs.edit().putString(Platform.PREF_KEY, platform.key).apply()
         _state.update { it.copy(currentPlatform = platform, isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             when (platform) {

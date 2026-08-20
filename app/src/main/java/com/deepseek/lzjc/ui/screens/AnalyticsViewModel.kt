@@ -70,7 +70,7 @@ class AnalyticsViewModel @Inject constructor(
 
     init {
         val prefs = appContext.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
-        val savedPlatform = Platform.fromKey(prefs.getString("current_platform", "deepseek") ?: "deepseek")
+        val savedPlatform = Platform.fromKey(prefs.getString(Platform.PREF_KEY, "deepseek") ?: "deepseek")
         _state.update { it.copy(currentPlatform = savedPlatform) }
     }
 

@@ -85,7 +85,10 @@ fun DashboardScreen(
         when (state.currentPlatform) {
             Platform.DEEPSEEK -> {
                 if (!state.hasApiKey) {
-                    EmptyDashboard(onNavigateToSettings = onNavigateToSettings)
+                    EmptyDashboard(
+                        onNavigateToSettings = onNavigateToSettings,
+                        onSwitchToMiMo = { viewModel.switchPlatform(Platform.MIMO) }
+                    )
                 } else {
                     DashboardContent(state = state, viewModel = viewModel)
                 }
@@ -825,7 +828,10 @@ private fun formatCompactNumber(n: Long): String {
 }
 
 @Composable
-private fun EmptyDashboard(onNavigateToSettings: () -> Unit) {
+private fun EmptyDashboard(
+    onNavigateToSettings: () -> Unit,
+    onSwitchToMiMo: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -865,6 +871,16 @@ private fun EmptyDashboard(onNavigateToSettings: () -> Unit) {
             )
         ) {
             Text(stringResource(R.string.go_to_settings), fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(12.dp))
+        Button(
+            onClick = onSwitchToMiMo,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MiMoOrange.copy(alpha = 0.12f),
+                contentColor = MiMoOrange
+            )
+        ) {
+            Text("Switch to MiMo", fontWeight = FontWeight.SemiBold)
         }
     }
 }
