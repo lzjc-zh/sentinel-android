@@ -95,7 +95,10 @@ fun DashboardScreen(
             }
             Platform.MIMO -> {
                 if (!state.mimoLoggedIn) {
-                    MiMoLoginDashboard(onLoginSuccess = { viewModel.onMiMoLoginSuccess() })
+                    MiMoLoginDashboard(
+                        onLoginSuccess = { viewModel.onMiMoLoginSuccess() },
+                        onSwitchToDeepSeek = { viewModel.switchPlatform(Platform.DEEPSEEK) }
+                    )
                 } else {
                     MiMoDashboardContent(state = state, viewModel = viewModel)
                 }
@@ -585,7 +588,10 @@ private fun MiMoTokenSummaryCard(data: MiMoUsageData) {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun MiMoLoginDashboard(onLoginSuccess: () -> Unit) {
+private fun MiMoLoginDashboard(
+    onLoginSuccess: () -> Unit,
+    onSwitchToDeepSeek: () -> Unit = {}
+) {
     var showWebView by remember { mutableStateOf(false) }
 
     if (showWebView) {
@@ -619,6 +625,16 @@ private fun MiMoLoginDashboard(onLoginSuccess: () -> Unit) {
                 )
             ) {
                 Text("登录 MiMo", fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onSwitchToDeepSeek,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4D6BFE).copy(alpha = 0.12f),
+                    contentColor = Color(0xFF4D6BFE)
+                )
+            ) {
+                Text("Switch to DeepSeek", fontWeight = FontWeight.SemiBold)
             }
         }
     }
