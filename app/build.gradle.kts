@@ -7,22 +7,33 @@ plugins {
 }
 
 android {
-    namespace = "com.deepseek.balance"
+    namespace = "com.deepseek.lzjc"
 
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.deepseek.balance"
+        applicationId = "com.flow.api"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.1.0"
+        versionCode = 1
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            val ksFile = rootProject.file("sentinel.keystore")
+            storeFile = ksFile
+            storePassword = "sentinel2026"
+            keyAlias = "sentinel"
+            keyPassword = "sentinel2026"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

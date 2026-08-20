@@ -15,3 +15,10 @@ app/build
 *.aab
 *.jks
 *.keystore
+*.db
+*.db-wal
+*.db-shm
+screen*.png
+trace_output.txt
+build_err.txt
+build_out.txt

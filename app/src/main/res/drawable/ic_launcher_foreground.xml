@@ -5,26 +5,37 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Signal scan arc (seek) -->
+    <!-- Left arc: DeepSeek blue -->
     <path
         android:fillColor="@android:color/transparent"
         android:strokeColor="#4D6BFE"
-        android:strokeWidth="7"
+        android:strokeWidth="6"
         android:strokeLineCap="round"
-        android:pathData="M32,38 C44,30 60,30 70,40 C80,50 80,64 70,72" />
+        android:pathData="M30,36 C38,26 52,24 54,54 C56,84 38,80 30,72" />
 
-    <!-- Inner flow stream (flow) -->
+    <!-- Right arc: MiMo orange -->
     <path
         android:fillColor="@android:color/transparent"
-        android:strokeColor="#4D6BFE"
-        android:strokeWidth="4"
+        android:strokeColor="#FF6A00"
+        android:strokeWidth="6"
         android:strokeLineCap="round"
-        android:alpha="0.5"
-        android:pathData="M32,46 C42,38 54,38 62,46 C70,54 70,64 62,70" />
+        android:pathData="M78,36 C70,26 56,24 54,54 C52,84 70,80 78,72" />
 
-    <!-- Focal origin node -->
+    <!-- Center merge node: gradient blend -->
     <path
         android:fillColor="#4D6BFE"
-        android:pathData="M32,38 m-4.5,0 a4.5,4.5 0,1 0,9 0 a4.5,4.5 0,1 0,-9 0" />
+        android:pathData="M54,54 m-5,0 a5,5 0,1 0,10 0 a5,5 0,1 0,-10 0" />
+
+    <!-- Top sentinel dot -->
+    <path
+        android:fillColor="#FF6A00"
+        android:alpha="0.7"
+        android:pathData="M54,28 m-3,0 a3,3 0,1 0,6 0 a3,3 0,1 0,-6 0" />
+
+    <!-- Bottom sentinel dot -->
+    <path
+        android:fillColor="#4D6BFE"
+        android:alpha="0.7"
+        android:pathData="M54,80 m-3,0 a3,3 0,1 0,6 0 a3,3 0,1 0,-6 0" />
 
 </vector>

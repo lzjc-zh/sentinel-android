@@ -31,7 +31,7 @@
         <receiver
             android:name=".ui.widget.BalanceWidgetSmall"
             android:exported="true"
-            android:label="SeekFlow 紧凑">
+            android:label="哨兵 紧凑">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -43,7 +43,7 @@
         <receiver
             android:name=".ui.widget.BalanceWidgetMedium"
             android:exported="true"
-            android:label="SeekFlow 经典">
+            android:label="哨兵 经典">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -55,7 +55,7 @@
         <receiver
             android:name=".ui.widget.BalanceWidgetLarge"
             android:exported="true"
-            android:label="SeekFlow 宽版">
+            android:label="哨兵 宽版">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
