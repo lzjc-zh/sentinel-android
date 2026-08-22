@@ -15,19 +15,11 @@ import com.deepseek.lzjc.data.worker.WidgetRefreshWorker
 import java.util.concurrent.TimeUnit
 
 /**
- * 小组件基类 — 三个尺寸共用刷新调度和更新逻辑
+ * Widget base class — three sizes share refresh scheduling and update logic.
  */
 open class BalanceWidgetProvider : AppWidgetProvider() {
 
-    /**
-     * 子类重写返回对应的布局 ID
-     */
     protected open fun getLayoutId(): Int = R.layout.widget_balance
-
-    /**
-     * 子类重写返回是否显示标题标签（当日消耗 / 本月消耗）
-     */
-    protected open fun hasLabels(): Boolean = false
 
     override fun onUpdate(
         context: Context,
@@ -36,7 +28,7 @@ open class BalanceWidgetProvider : AppWidgetProvider() {
     ) {
         schedulePeriodicRefresh(context)
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId, getLayoutId(), hasLabels())
+            updateAppWidget(context, appWidgetManager, appWidgetId, getLayoutId())
         }
     }
 
@@ -57,54 +49,80 @@ open class BalanceWidgetProvider : AppWidgetProvider() {
             context: Context,
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
-            layoutId: Int,
-            labels: Boolean
+            layoutId: Int
         ) {
             val cache = WidgetDataCache(context)
-            val data = cache.getBalanceData()
+            val data = cache.getWidgetData()
             val views = RemoteViews(context.packageName, layoutId)
 
+            // Set logo on medium/large
             if (layoutId != R.layout.widget_balance) {
-                views.setImageViewResource(
-                    R.id.widget_logo,
-                    R.mipmap.ic_launcher
-                )
+                views.setImageViewResource(R.id.widget_logo, R.mipmap.ic_launcher)
             }
 
-            // 点击打开应用
+            // Click to open app
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pendingIntent = PendingIntent.getActivity(
-                context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
 
-            views.setTextViewText(R.id.widget_balance_amount, "¥${data.totalBalance}")
-            views.setTextViewText(R.id.widget_daily_amount,
-                if (labels) "¥${data.dailyCost}" else "${context.getString(R.string.widget_day_prefix)}¥${data.dailyCost}")
-            views.setTextViewText(R.id.widget_monthly_amount,
-                if (labels) "¥${data.monthlyCost}" else "${context.getString(R.string.widget_month_prefix)}¥${data.monthlyCost}")
+            // Platform name + color
+            val platformColor = if (data.platform == "MiMo") 0xFFFF6A00.toInt() else 0xFF4D6BFE.toInt()
+            views.setTextViewText(R.id.widget_platform, data.platform)
+            views.setTextColor(R.id.widget_platform, platformColor)
+
+            // Balance
+            views.setTextViewText(R.id.widget_balance_amount, "¥${data.balance}")
+
+            // Daily cost
+            views.setTextViewText(R.id.widget_daily_amount, "¥${data.dailyCost}")
+
+            // Monthly cost
+            views.setTextViewText(R.id.widget_monthly_amount, "¥${data.monthlyCost}")
+
+            // Request counts (medium + large only)
+            if (layoutId != R.layout.widget_balance) {
+                views.setTextViewText(R.id.widget_daily_requests, "${data.dailyRequests} 次请求")
+                views.setTextViewText(R.id.widget_monthly_requests, "${data.monthlyRequests} 次请求")
+            }
+
+            // Update time (large only)
+            if (layoutId == R.layout.widget_balance_large) {
+                views.setTextViewText(R.id.widget_update_time, formatUpdateTime(data.lastUpdate))
+            }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        private fun formatUpdateTime(timestamp: Long): String {
+            if (timestamp == 0L) return "未更新"
+            val now = System.currentTimeMillis()
+            val diff = now - timestamp
+            return when {
+                diff < 60_000 -> "刚刚更新"
+                diff < 3600_000 -> "${diff / 60_000} 分钟前"
+                diff < 86400_000 -> "${diff / 3600_000} 小时前"
+                else -> "${diff / 86400_000} 天前"
+            }
         }
     }
 }
 
-/** 2×1 紧凑 — 无标题，仅余额 + 日/月消耗 */
+/** 2×1 compact — platform + balance + daily/monthly */
 class BalanceWidgetSmall : BalanceWidgetProvider() {
     override fun getLayoutId() = R.layout.widget_balance
-    override fun hasLabels() = false
 }
 
-/** 2×1 经典 — 带标题和鲸鱼 logo */
+/** 2×1 classic — logo + platform + balance + info cards with requests */
 class BalanceWidgetMedium : BalanceWidgetProvider() {
     override fun getLayoutId() = R.layout.widget_balance_medium
-    override fun hasLabels() = true
 }
 
-/** 2×2 宽版 — 带鲸鱼 logo，大字 */
+/** 2×2 large — logo + platform + balance + cards + update time */
 class BalanceWidgetLarge : BalanceWidgetProvider() {
     override fun getLayoutId() = R.layout.widget_balance_large
-    override fun hasLabels() = false
 }

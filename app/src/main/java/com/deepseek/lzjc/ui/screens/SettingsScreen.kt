@@ -394,6 +394,46 @@ fun SettingsScreen(
             }
         }
 
+        // About
+        SettingsPanel {
+            val ctx = LocalContext.current
+            val versionName = remember {
+                try {
+                    ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
+                } catch (_: Exception) { "?" }
+            }
+            Text(
+                stringResource(R.string.about_title),
+                color = Color(0xFF1A1A1A),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "哨兵",
+                    color = Color(0xFF1A1A1A),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "v$versionName",
+                    color = Color(0xFF999999),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.about_description),
+                color = Color(0xFF666666),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
         // Open-source credits
         SettingsPanel {
             Text(

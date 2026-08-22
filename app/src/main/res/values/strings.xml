@@ -19,6 +19,8 @@
 
     <!-- Settings -->
     <string name="title_settings">设置</string>
+    <string name="about_title">关于</string>
+    <string name="about_description">AI 用量监控工具，支持 DeepSeek 与 MiMo 双平台。</string>
     <string name="api_settings">DeepSeek API 设置</string>
     <string name="label_api_key">API Key（查询余额）</string>
     <string name="label_user_token">User Token（查询用量）</string>

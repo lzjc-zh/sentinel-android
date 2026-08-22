@@ -41,6 +41,8 @@ data class AnalyticsState(
     val mimoBalance: Double = 0.0,
     val mimoCashBalance: Double = 0.0,
     val mimoGiftBalance: Double = 0.0,
+    val mimoTodayCost: Double = 0.0,
+    val mimoMonthCost: Double = 0.0,
     val mimoAvgDailyCost: Double = 0.0,
     val mimoDaysRemaining: Int = 0,
     val mimoCacheHitRate: Double = 0.0,
@@ -176,6 +178,10 @@ class AnalyticsViewModel @Inject constructor(
                 // Subscription token trend (token consumption per day)
                 val subscriptionTokenTrend = mimoRepository.getDailySubscriptionTokenTrend(30)
 
+                // Pricing-based cost from per-model token breakdown
+                val todayCost = mimoRepository.getTodayCost()
+                val monthCost = mimoRepository.getMonthCost()
+
                 // Average daily estimated cost
                 val avgDailyCost = mimoRepository.getAvgDailyCost(7)
 
@@ -198,6 +204,8 @@ class AnalyticsViewModel @Inject constructor(
                         mimoBalance = mimoBalance,
                         mimoCashBalance = mimoCashBalance,
                         mimoGiftBalance = mimoGiftBalance,
+                        mimoTodayCost = todayCost,
+                        mimoMonthCost = monthCost,
                         mimoAvgDailyCost = avgDailyCost,
                         mimoDaysRemaining = if (avgDailyCost > 0.0001) (mimoCashBalance / avgDailyCost).toInt() else 0,
                         mimoTrendData = estimatedCostTrend,

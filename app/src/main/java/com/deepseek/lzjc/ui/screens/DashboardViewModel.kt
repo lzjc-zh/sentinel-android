@@ -264,10 +264,12 @@ class DashboardViewModel @Inject constructor(
 
                 // Update widget
                 val currentState = _state.value
-                widgetDataCache.saveBalanceData(
-                    totalBalance = currentState.totalBalance,
+                widgetDataCache.saveDeepSeekData(
+                    balance = currentState.totalBalance,
                     dailyCost = currentState.dailyCost,
-                    monthlyCost = currentState.monthlyCost
+                    monthlyCost = currentState.monthlyCost,
+                    dailyRequests = currentState.dailyRequests,
+                    monthlyRequests = currentState.monthlyRequests
                 )
 
                 // Balance threshold notification

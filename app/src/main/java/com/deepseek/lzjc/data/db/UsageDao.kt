@@ -86,12 +86,12 @@ interface UsageDao {
     @Query("DELETE FROM usage_records WHERE date = :date AND model = :model AND platform = :platform")
     suspend fun deleteByDateAndModelAndPlatform(date: String, model: String, platform: String)
 
-    /** 查询指定日期指定平台的总消耗 */
-    @Query("SELECT COALESCE(SUM(costAmount), 0.0) FROM usage_records WHERE date = :date AND platform = :platform")
+    /** 查询指定日期指定平台的总消耗（排除 balance-delta 和 total 避免双重计算） */
+    @Query("SELECT COALESCE(SUM(costAmount), 0.0) FROM usage_records WHERE date = :date AND platform = :platform AND model != 'balance-delta' AND model != 'total'")
     suspend fun getDailyCostByPlatform(date: String, platform: String): Double
 
-    /** 查询指定月份指定平台的总消耗 */
-    @Query("SELECT COALESCE(SUM(costAmount), 0.0) FROM usage_records WHERE month = :month AND platform = :platform")
+    /** 查询指定月份指定平台的总消耗（排除 balance-delta 和 total 避免双重计算） */
+    @Query("SELECT COALESCE(SUM(costAmount), 0.0) FROM usage_records WHERE month = :month AND platform = :platform AND model != 'balance-delta' AND model != 'total'")
     suspend fun getMonthlyCostByPlatform(month: String, platform: String): Double
 
     /** 查询指定日期指定平台指定模型的token总量 */
@@ -102,11 +102,11 @@ interface UsageDao {
     @Query("SELECT COALESCE(SUM(totalTokens), 0) FROM usage_records WHERE month = :month AND model = :model AND platform = :platform")
     suspend fun getMonthlyModelTokensByPlatform(month: String, model: String, platform: String): Long
 
-    /** 查询最近N天的每日消耗（按平台，Flow） */
+    /** 查询最近N天的每日消耗（按平台，Flow，排除 balance-delta 和 total） */
     @Query("""
         SELECT date, SUM(totalTokens) as totalTokens, SUM(costAmount) as costAmount
         FROM usage_records
-        WHERE date >= :fromDate AND platform = :platform
+        WHERE date >= :fromDate AND platform = :platform AND model != 'balance-delta' AND model != 'total'
         GROUP BY date
         ORDER BY date ASC
     """)
@@ -136,11 +136,11 @@ interface UsageDao {
     @Query("SELECT COALESCE(SUM(cacheMissTokens), 0) FROM usage_records WHERE month = :month AND platform = :platform AND model != 'balance-delta'")
     suspend fun getMonthlyCacheMissTokensByPlatform(month: String, platform: String): Long
 
-    /** 查询最近N天的每日消耗（按平台） */
+    /** 查询最近N天的每日消耗（按平台，排除 balance-delta 和 total） */
     @Query("""
         SELECT date, SUM(totalTokens) as totalTokens, SUM(costAmount) as costAmount
         FROM usage_records
-        WHERE date >= :fromDate AND platform = :platform
+        WHERE date >= :fromDate AND platform = :platform AND model != 'balance-delta' AND model != 'total'
         GROUP BY date
         ORDER BY date ASC
     """)
@@ -210,7 +210,7 @@ interface UsageDao {
                SUM(cacheMissTokens) as cacheMissTokens,
                SUM(requestCount) as requestCount
         FROM usage_records
-        WHERE date >= :fromDate AND model != 'balance-delta' AND platform = :platform
+        WHERE date >= :fromDate AND model != 'balance-delta' AND model != 'total' AND platform = :platform
         GROUP BY date
         ORDER BY date ASC
     """)
@@ -225,7 +225,7 @@ interface UsageDao {
                SUM(cacheMissTokens) as cacheMissTokens,
                SUM(requestCount) as requestCount
         FROM usage_records
-        WHERE date >= :fromDate AND model != 'balance-delta' AND platform = :platform
+        WHERE date >= :fromDate AND model != 'balance-delta' AND model != 'total' AND platform = :platform
         GROUP BY model
     """)
     suspend fun getEnhancedModelCostSinceByPlatform(fromDate: String, platform: String): List<EnhancedModelCostSummary>

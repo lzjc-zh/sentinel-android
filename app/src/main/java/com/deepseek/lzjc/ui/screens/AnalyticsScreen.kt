@@ -50,6 +50,8 @@ private fun MiMoBalanceOverviewCard(
     cashBalance: Double,
     giftBalance: Double,
     totalBalance: Double,
+    todayCost: Double,
+    monthCost: Double,
     avgDailyCost: Double
 ) {
     GlassPanel(radius = 22) {
@@ -62,6 +64,7 @@ private fun MiMoBalanceOverviewCard(
             )
             Spacer(Modifier.height(10.dp))
 
+            // Balance row: cash + gift
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -80,6 +83,33 @@ private fun MiMoBalanceOverviewCard(
                     Text(
                         "¥${String.format("%.2f", giftBalance)}",
                         color = Color(0xFF51F0AE),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Spending row: today + month
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("今日消耗", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "¥${String.format("%.4f", todayCost)}",
+                        color = Color(0xFFFF9232),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("本月消耗", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "¥${String.format("%.2f", monthCost)}",
+                        color = Color(0xFFFF9232),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -234,6 +264,8 @@ fun AnalyticsScreen(
                                     cashBalance = state.mimoCashBalance,
                                     giftBalance = state.mimoGiftBalance,
                                     totalBalance = state.mimoBalance,
+                                    todayCost = state.mimoTodayCost,
+                                    monthCost = state.mimoMonthCost,
                                     avgDailyCost = state.mimoAvgDailyCost
                                 )
                             }

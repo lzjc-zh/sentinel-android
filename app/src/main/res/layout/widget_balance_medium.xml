@@ -3,11 +3,11 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="10dp"
+    android:padding="12dp"
     android:background="@drawable/widget_card_bg"
     android:orientation="vertical">
 
-    <!-- Top row: logo + 账户余额 -->
+    <!-- Header: logo + platform name + balance -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -17,51 +17,54 @@
 
         <ImageView
             android:id="@+id/widget_logo"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginEnd="10dp"
-            android:contentDescription="DeepSeek"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
             android:src="@mipmap/ic_launcher"
+            android:contentDescription="哨兵"
             android:importantForAccessibility="no" />
 
         <TextView
-            android:layout_width="0dp"
+            android:id="@+id/widget_platform"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="账户余额"
-            android:textColor="#1A1A1A"
-            android:textSize="14sp"
+            android:text="DeepSeek"
+            android:textColor="#4D6BFE"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/widget_balance_amount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¥0.00"
+            android:textColor="#1A1A1A"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeMaxTextSize="22sp" />
     </LinearLayout>
 
-    <!-- Balance amount -->
-    <TextView
-        android:id="@+id/widget_balance_amount"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="2"
-        android:text="¥0.00"
-        android:textColor="#000000"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:gravity="center_vertical" />
-
-    <!-- Bottom row: daily + monthly cost -->
+    <!-- Info cards: daily + monthly -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1.5"
-        android:layout_marginTop="2dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:weightSum="2">
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
 
+        <!-- Daily card -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginEnd="5dp"
+            android:layout_marginEnd="4dp"
             android:background="@drawable/widget_item_bg"
             android:gravity="center"
             android:orientation="vertical"
@@ -70,8 +73,8 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="当日消耗"
-                android:textColor="#666666"
+                android:text="今日消耗"
+                android:textColor="#999999"
                 android:textSize="10sp" />
 
             <TextView
@@ -79,22 +82,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
-                android:autoSizeMaxTextSize="16sp"
-                android:autoSizeMinTextSize="8sp"
+                android:autoSizeMaxTextSize="15sp"
+                android:autoSizeMinTextSize="9sp"
                 android:autoSizeTextType="uniform"
                 android:gravity="center"
                 android:text="¥0.00"
-                android:textColor="#000000"
-                android:textSize="16sp"
+                android:textColor="#1A1A1A"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/widget_daily_requests"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 次请求"
+                android:textColor="#999999"
+                android:textSize="9sp" />
         </LinearLayout>
 
+        <!-- Monthly card -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/widget_item_bg"
             android:gravity="center"
             android:orientation="vertical"
@@ -104,7 +115,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="本月消耗"
-                android:textColor="#666666"
+                android:textColor="#999999"
                 android:textSize="10sp" />
 
             <TextView
@@ -112,17 +123,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
-                android:autoSizeMaxTextSize="16sp"
-                android:autoSizeMinTextSize="8sp"
+                android:autoSizeMaxTextSize="15sp"
+                android:autoSizeMinTextSize="9sp"
                 android:autoSizeTextType="uniform"
                 android:gravity="center"
                 android:text="¥0.00"
-                android:textColor="#000000"
-                android:textSize="16sp"
+                android:textColor="#1A1A1A"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/widget_monthly_requests"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 次请求"
+                android:textColor="#999999"
+                android:textSize="9sp" />
         </LinearLayout>
-
     </LinearLayout>
 
 </LinearLayout>
