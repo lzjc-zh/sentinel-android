@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.deepseek.lzjc.R
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun CacheHitRateCard(
@@ -51,7 +52,7 @@ fun CacheHitRateCard(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     stringResource(R.string.cache_title),
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -59,7 +60,7 @@ fun CacheHitRateCard(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         periodLabel,
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -69,7 +70,7 @@ fun CacheHitRateCard(
             if (cacheHitTokens + cacheMissTokens == 0L) {
                 Text(
                     stringResource(R.string.cache_no_data),
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.appColors.textTertiary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
@@ -92,7 +93,7 @@ fun CacheHitRateCard(
                         if (estimatedSaved > 0.001) {
                             Text(
                                 stringResource(R.string.cache_saved, String.format("%.2f", estimatedSaved)),
-                                color = Color(0xFF666666),
+                                color = MaterialTheme.appColors.textSecondary,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -133,7 +134,7 @@ private fun CacheRateRing(
     rate: Double,
     modifier: Modifier = Modifier
 ) {
-    val bgColor = Color(0xFFE5E7EB)
+    val bgColor = MaterialTheme.appColors.border
     val fillColor = Color(0xFF10B981)
 
     Canvas(modifier = modifier) {
@@ -178,13 +179,13 @@ private fun CacheDetailItem(
         Spacer(Modifier.width(6.dp))
         Text(
             label,
-            color = Color(0xFF999999),
+            color = MaterialTheme.appColors.textTertiary,
             style = MaterialTheme.typography.bodySmall
         )
         Spacer(Modifier.width(4.dp))
         Text(
             value,
-            color = Color(0xFF333333),
+            color = MaterialTheme.appColors.textPrimary,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.SemiBold
         )

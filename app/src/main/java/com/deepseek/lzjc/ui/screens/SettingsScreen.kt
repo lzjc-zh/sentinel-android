@@ -62,6 +62,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.deepseek.lzjc.LocalThemeMode
 import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.Platform
 import com.deepseek.lzjc.data.mimo.MiMoCookieManager
@@ -74,6 +75,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.deepseek.lzjc.ui.theme.appColors
 
 private val MiMoOrange = Color(0xFFFF6A00)
 
@@ -150,7 +152,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val accent = Color(0xFF4D6BFE)
+    val accent = MaterialTheme.appColors.accent
 
     var showKey by remember { mutableStateOf(false) }
     var showToken by remember { mutableStateOf(false) }
@@ -185,7 +187,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.appColors.background)
             .verticalScroll(rememberScrollState())
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -193,12 +195,12 @@ fun SettingsScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF333333))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.appColors.textPrimary)
                 }
             }
             Text(
                 stringResource(R.string.title_settings),
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -208,7 +210,7 @@ fun SettingsScreen(
         SettingsPanel {
             Text(
                 "平台",
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -238,7 +240,7 @@ fun SettingsScreen(
             SettingsPanel {
                 Text(
                     stringResource(R.string.api_settings),
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -277,20 +279,20 @@ fun SettingsScreen(
                     singleLine = true,
                     prefix = { Text("\u00a5") },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color(0xFF000000),
-                        unfocusedTextColor = Color(0xFF000000),
+                        focusedTextColor = MaterialTheme.appColors.textPrimary,
+                        unfocusedTextColor = MaterialTheme.appColors.textPrimary,
                         focusedLabelColor = accent,
-                        unfocusedLabelColor = Color(0xFF666666),
+                        unfocusedLabelColor = MaterialTheme.appColors.textSecondary,
                         focusedBorderColor = accent,
-                        unfocusedBorderColor = Color(0xFFCCCCCC),
-                        focusedPlaceholderColor = Color(0xFF999999),
-                        unfocusedPlaceholderColor = Color(0xFF999999),
+                        unfocusedBorderColor = MaterialTheme.appColors.border,
+                        focusedPlaceholderColor = MaterialTheme.appColors.textTertiary,
+                        unfocusedPlaceholderColor = MaterialTheme.appColors.textTertiary,
                         cursorColor = accent
                     )
                 )
                 Text(
                     stringResource(R.string.threshold_desc),
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.appColors.textTertiary,
                     style = MaterialTheme.typography.bodySmall
                 )
 
@@ -316,14 +318,14 @@ fun SettingsScreen(
             SettingsPanel {
                 Text(
                     stringResource(R.string.title_usage),
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
                     stringResource(R.string.usage_text),
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.appColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -334,7 +336,7 @@ fun SettingsScreen(
             SettingsPanel {
                 Text(
                     "MiMo 账号",
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -361,7 +363,7 @@ fun SettingsScreen(
                 } else {
                     Text(
                         "未登录",
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(Modifier.height(10.dp))
@@ -381,16 +383,59 @@ fun SettingsScreen(
             SettingsPanel {
                 Text(
                     "使用说明",
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "点击「登录 MiMo」将打开小米账号登录页面。\n\n登录成功后，系统会自动提取认证 Cookie，之后即可查看 MiMo 平台的用量数据。\n\n数据来源：platform.xiaomimimo.com",
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.appColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+        }
+
+        // Theme settings
+        SettingsPanel {
+            val ctx = LocalContext.current
+            val themeModeState = LocalThemeMode.current
+            val themeMode = themeModeState.intValue
+            Text(
+                stringResource(R.string.title_theme),
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                data class ThemeOption(val label: String, val value: Int)
+                val options = listOf(
+                    ThemeOption(stringResource(R.string.theme_follow_system), 0),
+                    ThemeOption(stringResource(R.string.theme_light), 1),
+                    ThemeOption(stringResource(R.string.theme_dark), 2)
+                )
+                options.forEach { opt ->
+                    FilterChip(
+                        selected = themeMode == opt.value,
+                        onClick = {
+                            themeModeState.intValue = opt.value
+                            ctx.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
+                                .edit().putInt("theme_mode", opt.value).apply()
+                        },
+                        label = {
+                            Text(
+                                opt.label,
+                                fontWeight = if (themeMode == opt.value) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 13.sp
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.appColors.accentLight,
+                            selectedLabelColor = MaterialTheme.appColors.accent
+                        )
+                    )
+                }
             }
         }
 
@@ -404,7 +449,7 @@ fun SettingsScreen(
             }
             Text(
                 stringResource(R.string.about_title),
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -416,20 +461,20 @@ fun SettingsScreen(
             ) {
                 Text(
                     "哨兵",
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     "v$versionName",
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.appColors.textTertiary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(R.string.about_description),
-                color = Color(0xFF666666),
+                color = MaterialTheme.appColors.textSecondary,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -438,7 +483,7 @@ fun SettingsScreen(
         SettingsPanel {
             Text(
                 "致谢",
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -459,7 +504,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(10.dp))
             Text(
                 "本应用基于上述开源项目整合开发，\n感谢原作者的杰出贡献。",
-                color = Color(0xFF999999),
+                color = MaterialTheme.appColors.textTertiary,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -468,7 +513,7 @@ fun SettingsScreen(
         SettingsPanel {
             Text(
                 stringResource(R.string.title_language),
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -486,12 +531,12 @@ fun SettingsScreen(
                         .menuAnchor()
                         .fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color(0xFF000000),
-                        unfocusedTextColor = Color(0xFF000000),
+                        focusedTextColor = MaterialTheme.appColors.textPrimary,
+                        unfocusedTextColor = MaterialTheme.appColors.textPrimary,
                         focusedLabelColor = accent,
-                        unfocusedLabelColor = Color(0xFF666666),
+                        unfocusedLabelColor = MaterialTheme.appColors.textSecondary,
                         focusedBorderColor = accent,
-                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                        unfocusedBorderColor = MaterialTheme.appColors.border,
                         cursorColor = accent
                     )
                 )
@@ -533,7 +578,7 @@ private fun MiMoLoginWebView(
         android.webkit.CookieManager.getInstance().flush()
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5))) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.appColors.background)) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color.White,
@@ -563,7 +608,7 @@ private fun MiMoLoginWebView(
                     onClick = onCancel,
                     colors = ButtonDefaults.outlinedButtonColors()
                 ) {
-                    Text("取消", color = Color(0xFF666666))
+                    Text("取消", color = MaterialTheme.appColors.textSecondary)
                 }
             }
         }
@@ -638,7 +683,7 @@ private fun SettingsPanel(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFFF5F7FA))
+            .background(MaterialTheme.appColors.surface)
             .padding(18.dp),
         content = content
     )
@@ -655,32 +700,32 @@ private fun CreditItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White)
+            .background(MaterialTheme.appColors.background)
             .padding(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 name,
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 "by $author",
-                color = Color(0xFF999999),
+                color = MaterialTheme.appColors.textTertiary,
                 style = MaterialTheme.typography.bodySmall
             )
         }
         Spacer(Modifier.height(2.dp))
         Text(
             desc,
-            color = Color(0xFF666666),
+            color = MaterialTheme.appColors.textSecondary,
             style = MaterialTheme.typography.bodySmall
         )
         Text(
             url,
-            color = Color(0xFF4D6BFE),
+            color = MaterialTheme.appColors.accent,
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -694,7 +739,7 @@ private fun SecretField(
     placeholder: String,
     visible: Boolean,
     onToggleVisible: () -> Unit,
-    accent: Color = Color(0xFF4D6BFE)
+    accent: Color = MaterialTheme.appColors.accent
 ) {
     OutlinedTextField(
         value = value,
@@ -708,19 +753,19 @@ private fun SecretField(
             TextButton(onClick = onToggleVisible) {
                 Text(
                     if (visible) stringResource(R.string.btn_hide) else stringResource(R.string.btn_show),
-                    color = Color(0xFF333333)
+                    color = MaterialTheme.appColors.textPrimary
                 )
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color(0xFF000000),
-            unfocusedTextColor = Color(0xFF000000),
+            focusedTextColor = MaterialTheme.appColors.textPrimary,
+            unfocusedTextColor = MaterialTheme.appColors.textPrimary,
             focusedLabelColor = accent,
-            unfocusedLabelColor = Color(0xFF666666),
+            unfocusedLabelColor = MaterialTheme.appColors.textSecondary,
             focusedBorderColor = accent,
-            unfocusedBorderColor = Color(0xFFCCCCCC),
-            focusedPlaceholderColor = Color(0xFF999999),
-            unfocusedPlaceholderColor = Color(0xFF999999),
+            unfocusedBorderColor = MaterialTheme.appColors.border,
+            focusedPlaceholderColor = MaterialTheme.appColors.textTertiary,
+            unfocusedPlaceholderColor = MaterialTheme.appColors.textTertiary,
             cursorColor = accent
         )
     )

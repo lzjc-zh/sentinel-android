@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.deepseek.lzjc.ui.theme.appColors
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -47,10 +49,10 @@ fun MainTabScreen() {
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.appColors.background,
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White,
+                containerColor = MaterialTheme.appColors.surface,
                 tonalElevation = 0.dp
             ) {
                 tabs.forEachIndexed { index, tab ->
@@ -62,11 +64,11 @@ fun MainTabScreen() {
                         icon = { Icon(tab.icon, contentDescription = tab.title) },
                         label = { Text(tab.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFF4D6BFE),
-                            selectedTextColor = Color(0xFF4D6BFE),
-                            unselectedIconColor = Color(0xFF999999),
-                            unselectedTextColor = Color(0xFF999999),
-                            indicatorColor = Color(0xFF4D6BFE).copy(alpha = 0.1f)
+                            selectedIconColor = MaterialTheme.appColors.accent,
+                            selectedTextColor = MaterialTheme.appColors.accent,
+                            unselectedIconColor = MaterialTheme.appColors.textTertiary,
+                            unselectedTextColor = MaterialTheme.appColors.textTertiary,
+                            indicatorColor = MaterialTheme.appColors.accentLight
                         )
                     )
                 }

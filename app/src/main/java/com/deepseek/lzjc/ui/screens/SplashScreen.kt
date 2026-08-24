@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.deepseek.lzjc.R
 import kotlinx.coroutines.delay
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun SplashScreen(
@@ -31,7 +32,7 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.appColors.background),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -43,7 +44,7 @@ fun SplashScreen(
             Spacer(Modifier.height(12.dp))
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = Color(0xFF4D6BFE))) { append("哨") }
+                    withStyle(SpanStyle(color = MaterialTheme.appColors.accent)) { append("哨") }
                     withStyle(SpanStyle(color = Color(0xFFFF6A00))) { append("兵") }
                 },
                 style = MaterialTheme.typography.headlineLarge,
@@ -52,7 +53,7 @@ fun SplashScreen(
             )
             Text(
                 "AI 用量监控",
-                color = Color(0xFF999999),
+                color = MaterialTheme.appColors.textTertiary,
                 style = MaterialTheme.typography.bodyMedium
             )
         }

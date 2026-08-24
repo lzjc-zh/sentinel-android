@@ -86,9 +86,16 @@
     <string name="breakdown_output">Salida</string>
     <string name="breakdown_requests">Solicitudes</string>
 
-    <!-- Widget -->
+        <!-- Theme -->
+    <string name="title_theme">Appearance</string>
+    <string name="theme_follow_system">Follow System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+<!-- Widget -->
     <string name="widget_day_prefix">D </string>
     <string name="widget_month_prefix">M </string>
     <string name="network_error">Error de red</string>
     <string name="refresh_failed">Error al actualizar</string>
 </resources>
+

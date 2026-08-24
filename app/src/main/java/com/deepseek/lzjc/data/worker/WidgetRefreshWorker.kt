@@ -6,14 +6,13 @@ import android.appwidget.AppWidgetManager
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.repository.MiMoRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import com.deepseek.lzjc.ui.widget.BalanceWidgetLarge
 import com.deepseek.lzjc.ui.widget.BalanceWidgetMedium
-import com.deepseek.lzjc.ui.widget.BalanceWidgetProvider
 import com.deepseek.lzjc.ui.widget.BalanceWidgetSmall
 import com.deepseek.lzjc.ui.widget.WidgetDataCache
+import com.deepseek.lzjc.ui.widget.WidgetUpdater
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.text.SimpleDateFormat
@@ -58,7 +57,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             try {
                 if (mimoRepository.isLoggedIn()) {
                     mimoRepository.refreshAndFetch()
-                    val (cash, gift, total) = mimoRepository.getStoredBalance()
+                    val (_, _, total) = mimoRepository.getStoredBalance()
                     val mimoDaily = mimoRepository.getTodayCost()
                     val mimoMonthly = mimoRepository.getMonthCost()
                     val mimoDailyReq = mimoRepository.getDailyRequestCount(today)
@@ -74,22 +73,15 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 }
             } catch (_: Exception) { }
 
-            // Update all widgets
-            val appWidgetManager = AppWidgetManager.getInstance(appContext)
-            val widgetConfigs = listOf(
-                BalanceWidgetSmall::class.java to R.layout.widget_balance,
-                BalanceWidgetMedium::class.java to R.layout.widget_balance_medium,
-                BalanceWidgetLarge::class.java to R.layout.widget_balance_large
-            )
-            for ((cls, layoutId) in widgetConfigs) {
-                val ids = appWidgetManager.getAppWidgetIds(ComponentName(appContext, cls))
-                for (id in ids) {
-                    BalanceWidgetProvider.updateAppWidget(appContext, appWidgetManager, id, layoutId)
-                }
+            // Update all widget instances via shared updater
+            val mgr = AppWidgetManager.getInstance(appContext)
+            for (cls in listOf(BalanceWidgetSmall::class.java, BalanceWidgetMedium::class.java, BalanceWidgetLarge::class.java)) {
+                val ids = mgr.getAppWidgetIds(ComponentName(appContext, cls))
+                ids.forEach { WidgetUpdater.update(appContext, mgr, it) }
             }
 
             Result.success()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }

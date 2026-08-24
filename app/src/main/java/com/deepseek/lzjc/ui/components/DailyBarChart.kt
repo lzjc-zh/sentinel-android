@@ -28,6 +28,7 @@ import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun DailyBarChart(
@@ -41,28 +42,35 @@ fun DailyBarChart(
     GlassPanel(modifier = modifier.fillMaxWidth(), radius = 24) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.chart_consumption_trend), color = Color(0xFF1A1A1A), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.chart_consumption_trend), color = MaterialTheme.appColors.textPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
-                Text("${stringResource(R.string.chart_total)} ${formatChartTokens(total)}", color = Color(0xFF333333), fontWeight = FontWeight.SemiBold)
+                Text("${stringResource(R.string.chart_total)} ${formatChartTokens(total)}", color = MaterialTheme.appColors.textPrimary, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(10.dp))
 
             val maxTokens = visibleData.maxOfOrNull { it.totalTokens }?.coerceAtLeast(1L) ?: 1L
-            val labelColor = android.graphics.Color.argb(180, 100, 100, 100)
-            val valueColor = android.graphics.Color.argb(210, 50, 50, 50)
+            val themeColors = MaterialTheme.appColors
+            val labelArgb = android.graphics.Color.argb(200,
+                themeColors.textSecondary.red.toInt().coerceIn(0,255),
+                themeColors.textSecondary.green.toInt().coerceIn(0,255),
+                themeColors.textSecondary.blue.toInt().coerceIn(0,255))
+            val valueArgb = android.graphics.Color.argb(230,
+                themeColors.textPrimary.red.toInt().coerceIn(0,255),
+                themeColors.textPrimary.green.toInt().coerceIn(0,255),
+                themeColors.textPrimary.blue.toInt().coerceIn(0,255))
 
-            // 缓存 Paint 对象，避免每帧重建
-            val valuePaint = remember {
+            // 缓存 Paint 对象，theme 变化时重建
+            val valuePaint = remember(valueArgb) {
                 android.graphics.Paint().apply {
-                    color = valueColor
+                    color = valueArgb
                     textSize = 28f
                     textAlign = android.graphics.Paint.Align.CENTER
                     isAntiAlias = true
                 }
             }
-            val labelPaint = remember {
+            val labelPaint = remember(labelArgb) {
                 android.graphics.Paint().apply {
-                    color = labelColor
+                    color = labelArgb
                     textSize = 31f
                     textAlign = android.graphics.Paint.Align.CENTER
                     isAntiAlias = true
@@ -89,7 +97,7 @@ fun DailyBarChart(
                 repeat(3) { line ->
                     val y = 28f + line * (chartHeight / 3f)
                     drawLine(
-                        color = Color.Black.copy(alpha = 0.12f),
+                        color = themeColors.divider,
                         start = Offset(0f, y),
                         end = Offset(size.width, y),
                         strokeWidth = 2f

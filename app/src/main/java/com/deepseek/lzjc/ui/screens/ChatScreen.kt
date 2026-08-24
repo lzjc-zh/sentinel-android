@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.deepseek.lzjc.ui.theme.appColors
 
 data class UiMessage(
     val id: Long,
@@ -184,7 +185,7 @@ private fun ChatContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.appColors.background)
     ) {
         LazyColumn(
             state = listState,
@@ -244,7 +245,7 @@ private fun ChatBubble(
                     bottomStart = if (isUser) 18.dp else 4.dp,
                     bottomEnd = if (isUser) 4.dp else 18.dp
                 ))
-                .background(if (isUser) Color(0xFFF0F2F5) else Color(0xFF4D6BFE))
+                .background(if (isUser) MaterialTheme.appColors.surface else MaterialTheme.appColors.accent)
                 .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             if (isStreaming) {
@@ -258,7 +259,7 @@ private fun ChatBubble(
             } else {
                 Text(
                     text = message.content,
-                    color = if (isUser) Color(0xFF1A1A1A) else Color.White,
+                    color = if (isUser) MaterialTheme.appColors.textPrimary else Color.White,
                     style = MaterialTheme.typography.bodyMedium,
                     lineHeight = 22.sp
                 )
@@ -347,7 +348,7 @@ private fun ThinkingBubble() {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp))
-                .background(Color(0xFF4D6BFE).copy(alpha = 0.5f))
+                .background(MaterialTheme.appColors.accent.copy(alpha = 0.5f))
                 .padding(horizontal = 18.dp, vertical = 12.dp)
         ) {
             Text(
@@ -370,25 +371,25 @@ private fun InputBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF5F7FA))
+            .background(MaterialTheme.appColors.surface)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedTextField(
             value = text,
             onValueChange = onTextChange,
-            placeholder = { Text("输入消息...", color = Color(0xFF999999)) },
+            placeholder = { Text("输入消息...", color = MaterialTheme.appColors.textTertiary) },
             modifier = Modifier.weight(1f),
             singleLine = true,
             shape = RoundedCornerShape(24.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color(0xFF1A1A1A),
-                unfocusedTextColor = Color(0xFF1A1A1A),
-                focusedBorderColor = Color(0xFF4D6BFE),
-                unfocusedBorderColor = Color(0xFFDDDDDD),
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                cursorColor = Color(0xFF4D6BFE)
+                focusedTextColor = MaterialTheme.appColors.textPrimary,
+                unfocusedTextColor = MaterialTheme.appColors.textPrimary,
+                focusedBorderColor = MaterialTheme.appColors.accent,
+                unfocusedBorderColor = MaterialTheme.appColors.border,
+                focusedContainerColor = MaterialTheme.appColors.card,
+                unfocusedContainerColor = MaterialTheme.appColors.card,
+                cursorColor = MaterialTheme.appColors.accent
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { if (text.isNotBlank()) onSend() })
@@ -400,7 +401,7 @@ private fun InputBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(22.dp))
-                .background(if (text.isNotBlank()) Color(0xFF4D6BFE) else Color(0xFFCCCCCC))
+                .background(if (text.isNotBlank()) MaterialTheme.appColors.accent else MaterialTheme.appColors.border)
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.Send,

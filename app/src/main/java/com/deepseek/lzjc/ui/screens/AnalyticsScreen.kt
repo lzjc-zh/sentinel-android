@@ -42,6 +42,7 @@ import com.deepseek.lzjc.ui.components.ModelPieChart
 import com.deepseek.lzjc.ui.components.RefreshAnimation
 import com.deepseek.lzjc.ui.components.RequestCountCard
 import com.deepseek.lzjc.ui.components.TrendLineChart
+import com.deepseek.lzjc.ui.theme.appColors
 
 private val MiMoOrange = Color(0xFFFF6A00)
 
@@ -58,7 +59,7 @@ private fun MiMoBalanceOverviewCard(
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
                 "MiMo 余额概览",
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -70,7 +71,7 @@ private fun MiMoBalanceOverviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("现金余额", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text("现金余额", color = MaterialTheme.appColors.textTertiary, style = MaterialTheme.typography.bodySmall)
                     Text(
                         "¥${String.format("%.2f", cashBalance)}",
                         color = MiMoOrange,
@@ -79,7 +80,7 @@ private fun MiMoBalanceOverviewCard(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("赠送余额", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text("赠送余额", color = MaterialTheme.appColors.textTertiary, style = MaterialTheme.typography.bodySmall)
                     Text(
                         "¥${String.format("%.2f", giftBalance)}",
                         color = Color(0xFF51F0AE),
@@ -97,7 +98,7 @@ private fun MiMoBalanceOverviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("今日消耗", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text("今日消耗", color = MaterialTheme.appColors.textTertiary, style = MaterialTheme.typography.bodySmall)
                     Text(
                         "¥${String.format("%.4f", todayCost)}",
                         color = Color(0xFFFF9232),
@@ -106,7 +107,7 @@ private fun MiMoBalanceOverviewCard(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("本月消耗", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text("本月消耗", color = MaterialTheme.appColors.textTertiary, style = MaterialTheme.typography.bodySmall)
                     Text(
                         "¥${String.format("%.2f", monthCost)}",
                         color = Color(0xFFFF9232),
@@ -123,14 +124,14 @@ private fun MiMoBalanceOverviewCard(
             ) {
                 Text(
                     "总计 ¥${String.format("%.2f", totalBalance)}",
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.appColors.textSecondary,
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (avgDailyCost > 0.0001 && cashBalance > 0) {
                     val daysLeft = (cashBalance / avgDailyCost).toInt()
                     Text(
                         "预计可用 ${daysLeft} 天",
-                        color = if (daysLeft < 7) Color(0xFFFF6B6B) else Color(0xFF666666),
+                        color = if (daysLeft < 7) Color(0xFFFF6B6B) else MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -153,7 +154,7 @@ fun AnalyticsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.appColors.background)
     ) {
         if (state.isLoading) {
             Box(
@@ -165,7 +166,7 @@ fun AnalyticsScreen(
                     Spacer(Modifier.height(14.dp))
                     Text(
                         stringResource(R.string.loading_analytics_data),
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -185,13 +186,13 @@ fun AnalyticsScreen(
                         ) {
                             Text(
                                 stringResource(R.string.title_analytics),
-                                color = Color(0xFF1A1A1A),
+                                color = MaterialTheme.appColors.textPrimary,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = { viewModel.refresh() }) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color(0xFF333333))
+                                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.appColors.textPrimary)
                             }
                         }
 
@@ -213,8 +214,8 @@ fun AnalyticsScreen(
                                         )
                                     },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = if (platform == Platform.MIMO) MiMoOrange.copy(alpha = 0.15f) else Color(0xFF4D6BFE).copy(alpha = 0.15f),
-                                        selectedLabelColor = if (platform == Platform.MIMO) MiMoOrange else Color(0xFF4D6BFE)
+                                        selectedContainerColor = if (platform == Platform.MIMO) MiMoOrange.copy(alpha = 0.15f) else MaterialTheme.appColors.accent.copy(alpha = 0.15f),
+                                        selectedLabelColor = if (platform == Platform.MIMO) MiMoOrange else MaterialTheme.appColors.accent
                                     )
                                 )
                             }

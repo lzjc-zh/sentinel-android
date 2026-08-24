@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.deepseek.lzjc.R
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun RequestCountCard(
@@ -40,13 +41,13 @@ fun RequestCountCard(
                 Icon(
                     Icons.Default.Api,
                     contentDescription = null,
-                    tint = Color(0xFF6366F1),
+                    tint = MaterialTheme.appColors.accent,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     stringResource(R.string.request_title),
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -82,19 +83,19 @@ private fun RequestMetricBlock(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFFF0F1FE))
+            .background(MaterialTheme.appColors.card)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             label,
-            color = Color(0xFF999999),
+            color = MaterialTheme.appColors.textTertiary,
             style = MaterialTheme.typography.bodySmall
         )
         Spacer(Modifier.height(4.dp))
         Text(
             value,
-            color = Color(0xFF1A1A1A),
+            color = MaterialTheme.appColors.textPrimary,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun UsageCard(
@@ -89,18 +90,18 @@ fun ModelTokenRow(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         modelName,
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.appColors.textPrimary,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-                    Text(formatTokens(tokens), color = Color(0xFF333333), fontWeight = FontWeight.SemiBold)
+                    Text(formatTokens(tokens), color = MaterialTheme.appColors.textPrimary, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "${tokens} Tokens",
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )

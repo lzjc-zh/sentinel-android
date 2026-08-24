@@ -25,6 +25,7 @@ import com.deepseek.lzjc.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun BalanceForecast(
@@ -38,13 +39,13 @@ fun BalanceForecast(
                 Icon(
                     Icons.Default.AccessTime,
                     contentDescription = null,
-                    tint = Color(0xFF4D6BFE),
+                    tint = MaterialTheme.appColors.accent,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     stringResource(R.string.forecast_title),
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -54,7 +55,7 @@ fun BalanceForecast(
             if (avgDailyCost <= 0.0001) {
                 Text(
                     stringResource(R.string.forecast_no_data),
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.appColors.textTertiary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
@@ -67,32 +68,32 @@ fun BalanceForecast(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         stringResource(R.string.forecast_days_prefix),
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         "$daysRemaining",
-                        color = Color(0xFF4D6BFE),
+                        color = MaterialTheme.appColors.accent,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         lineHeight = 30.sp
                     )
                     Text(
                         stringResource(R.string.forecast_days_suffix),
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.forecast_estimated_date, estimatedDate),
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.appColors.textTertiary,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     stringResource(R.string.forecast_daily_avg, String.format("%.2f", avgDailyCost)),
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.appColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )

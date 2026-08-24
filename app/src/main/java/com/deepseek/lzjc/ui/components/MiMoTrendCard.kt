@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.deepseek.lzjc.ui.theme.appColors
 
 /**
  * MiMo unified cost trend card.
@@ -57,13 +58,13 @@ fun MiMoCostTrendCard(
                 Column {
                     Text(
                         "消耗趋势",
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.appColors.textPrimary,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         "Token × 单价估算",
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -77,13 +78,14 @@ fun MiMoCostTrendCard(
                     )
                     Text(
                         formatTokenCompact(totalTokens),
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
             Spacer(Modifier.height(8.dp))
 
+            val dividerColor = MaterialTheme.appColors.divider
             // Chart (¥ values)
             Canvas(
                 modifier = Modifier
@@ -97,7 +99,7 @@ fun MiMoCostTrendCard(
                 repeat(3) { line ->
                     val y = 4f + line * (chartHeight / 3f)
                     drawLine(
-                        color = Color.Black.copy(alpha = 0.06f),
+                        color = dividerColor,
                         start = Offset(0f, y),
                         end = Offset(chartWidth, y),
                         strokeWidth = 1f
@@ -150,13 +152,13 @@ fun MiMoCostTrendCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "日均 ¥${String.format("%.2f", avgCost)}",
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         "日均 ${formatTokenCompact(avgTokens)}",
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

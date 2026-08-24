@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.db.ModelCostSummary
+import com.deepseek.lzjc.ui.theme.appColors
 
 private val MODEL_COLORS = listOf(
     Color(0xFF4D6BFE),  // 蓝
@@ -83,7 +84,7 @@ fun ModelPieChart(
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
                 title,
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -92,7 +93,7 @@ fun ModelPieChart(
             if (modelCosts.isEmpty() || total <= 0.0) {
                 Text(
                     stringResource(R.string.pie_no_data),
-                    color = Color(0xFF999999),
+                    color = MaterialTheme.appColors.textTertiary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
@@ -129,7 +130,7 @@ fun ModelPieChart(
                             else "¥${String.format("%.1f", total)}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF333333)
+                            color = MaterialTheme.appColors.textPrimary
                         )
                     }
 
@@ -151,14 +152,14 @@ fun ModelPieChart(
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     item.name,
-                                    color = Color(0xFF333333),
+                                    color = MaterialTheme.appColors.textPrimary,
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.weight(1f),
                                     maxLines = 1
                                 )
                                 Text(
                                     "${String.format("%.0f", item.pct)}%",
-                                    color = Color(0xFF666666),
+                                    color = MaterialTheme.appColors.textSecondary,
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.SemiBold
                                 )

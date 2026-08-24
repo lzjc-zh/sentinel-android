@@ -66,6 +66,7 @@ import com.deepseek.lzjc.ui.components.DayModelBreakdownPopup
 import com.deepseek.lzjc.ui.components.GlassPanel
 import com.deepseek.lzjc.ui.components.ModelTokenRow
 import com.deepseek.lzjc.ui.components.RefreshAnimation
+import com.deepseek.lzjc.ui.theme.appColors
 
 // MiMo accent color
 private val MiMoOrange = Color(0xFFFF6A00)
@@ -80,7 +81,7 @@ fun DashboardScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.appColors.background)
     ) {
         when (state.currentPlatform) {
             Platform.DEEPSEEK -> {
@@ -324,7 +325,7 @@ private fun PlatformHeaderBar(
             Spacer(Modifier.width(6.dp))
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = Color(0xFF4D6BFE))) { append("哨") }
+                    withStyle(SpanStyle(color = MaterialTheme.appColors.accent)) { append("哨") }
                     withStyle(SpanStyle(color = Color(0xFFFF6A00))) { append("兵") }
                 },
                 style = MaterialTheme.typography.titleLarge,
@@ -332,7 +333,7 @@ private fun PlatformHeaderBar(
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color(0xFF333333))
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.appColors.textPrimary)
             }
         }
 
@@ -355,8 +356,8 @@ private fun PlatformHeaderBar(
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = if (platform == Platform.MIMO) MiMoOrange.copy(alpha = 0.15f) else Color(0xFF4D6BFE).copy(alpha = 0.15f),
-                        selectedLabelColor = if (platform == Platform.MIMO) MiMoOrange else Color(0xFF4D6BFE)
+                        selectedContainerColor = if (platform == Platform.MIMO) MiMoOrange.copy(alpha = 0.15f) else MaterialTheme.appColors.accent.copy(alpha = 0.15f),
+                        selectedLabelColor = if (platform == Platform.MIMO) MiMoOrange else MaterialTheme.appColors.accent
                     )
                 )
             }
@@ -381,7 +382,7 @@ private fun MiMoOverviewCard(data: MiMoUsageData) {
         ) {
             Text(
                 "账户余额",
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -389,7 +390,7 @@ private fun MiMoOverviewCard(data: MiMoUsageData) {
             // 总余额（大字）
             Text(
                 "¥${data.totalBalance}",
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -400,19 +401,19 @@ private fun MiMoOverviewCard(data: MiMoUsageData) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("现金余额", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text("现金余额", color = MaterialTheme.appColors.textTertiary, style = MaterialTheme.typography.bodySmall)
                     Text(
                         "¥${data.cashBalance}",
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.appColors.textPrimary,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("赠送余额", color = Color(0xFF999999), style = MaterialTheme.typography.bodySmall)
+                    Text("赠送余额", color = MaterialTheme.appColors.textTertiary, style = MaterialTheme.typography.bodySmall)
                     Text(
                         "¥${data.giftBalance}",
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.appColors.textPrimary,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -427,12 +428,12 @@ private fun MiMoStatItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             label,
-            color = Color(0xFF999999),
+            color = MaterialTheme.appColors.textTertiary,
             style = MaterialTheme.typography.bodySmall
         )
         Text(
             value,
-            color = Color(0xFF1A1A1A),
+            color = MaterialTheme.appColors.textPrimary,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -463,7 +464,7 @@ private fun MiMoCreditsCard(data: MiMoUsageData) {
             ) {
                 Text(
                     "订阅额度",
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -484,7 +485,7 @@ private fun MiMoCreditsCard(data: MiMoUsageData) {
             if (data.expireDate.isNotBlank()) {
                 Text(
                     "有效期至 ${data.expireDate}",
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.appColors.textSecondary,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -507,12 +508,12 @@ private fun MiMoCreditsCard(data: MiMoUsageData) {
                 ) {
                     Text(
                         "已用 ${formatCompactNumber(data.creditsUsed)}",
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
                         "总计 ${formatCompactNumber(data.creditsTotal)}",
-                        color = Color(0xFF666666),
+                        color = MaterialTheme.appColors.textSecondary,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -542,7 +543,7 @@ private fun MiMoTokenSummaryCard(data: MiMoUsageData) {
         ) {
             Text(
                 "Token 使用概要",
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.appColors.textPrimary,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
@@ -567,13 +568,13 @@ private fun MiMoTokenSummaryCard(data: MiMoUsageData) {
                     ) {
                         Text(
                             model.modelName,
-                            color = Color(0xFF666666),
+                            color = MaterialTheme.appColors.textSecondary,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             "${formatCompactNumber(model.totalToken)} (${String.format("%.1f%%", model.percentage)})",
-                            color = Color(0xFF1A1A1A),
+                            color = MaterialTheme.appColors.textPrimary,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -613,7 +614,7 @@ private fun MiMoLoginDashboard(
             Spacer(Modifier.height(10.dp))
             Text(
                 "登录小米账号以查看 MiMo 用量数据",
-                color = Color(0xFF888888),
+                color = MaterialTheme.appColors.textTertiary,
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(Modifier.height(28.dp))
@@ -630,8 +631,8 @@ private fun MiMoLoginDashboard(
             Button(
                 onClick = onSwitchToDeepSeek,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4D6BFE).copy(alpha = 0.12f),
-                    contentColor = Color(0xFF4D6BFE)
+                    containerColor = MaterialTheme.appColors.accent.copy(alpha = 0.12f),
+                    contentColor = MaterialTheme.appColors.accent
                 )
             ) {
                 Text("Switch to DeepSeek", fontWeight = FontWeight.SemiBold)
@@ -654,7 +655,7 @@ private fun MiMoWebViewLogin(
         android.webkit.CookieManager.getInstance().flush()
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5))) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.appColors.background)) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color.White,
@@ -684,7 +685,7 @@ private fun MiMoWebViewLogin(
                     onClick = onCancel,
                     colors = ButtonDefaults.outlinedButtonColors()
                 ) {
-                    Text("取消", color = Color(0xFF666666))
+                    Text("取消", color = MaterialTheme.appColors.textSecondary)
                 }
             }
         }
@@ -764,7 +765,7 @@ private fun LoadingView() {
             Spacer(Modifier.height(14.dp))
             Text(
                 stringResource(R.string.loading_refreshing),
-                color = Color(0xFF666666),
+                color = MaterialTheme.appColors.textSecondary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -800,19 +801,19 @@ private fun RequestCountSummary(
         ) {
             Text(
                 stringResource(R.string.request_title),
-                color = Color(0xFF666666),
+                color = MaterialTheme.appColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         stringResource(R.string.request_today),
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
                         formatCompactNumber(dailyRequests),
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.appColors.textPrimary,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -820,12 +821,12 @@ private fun RequestCountSummary(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         stringResource(R.string.request_month),
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
                         formatCompactNumber(monthlyRequests),
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.appColors.textPrimary,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -860,22 +861,22 @@ private fun EmptyDashboard(
             contentDescription = "哨兵",
             modifier = Modifier
                 .size(86.dp)
-                .background(Color(0xFFF0F0F5), shape = RoundedCornerShape(24.dp))
+                .background(MaterialTheme.appColors.surface, shape = RoundedCornerShape(24.dp))
                 .padding(10.dp)
         )
         Spacer(Modifier.height(24.dp))
         Text(
             text = buildAnnotatedString {
-                withStyle(SpanStyle(color = Color(0xFF4D6BFE))) { append("哨") }
+                withStyle(SpanStyle(color = MaterialTheme.appColors.accent)) { append("哨") }
                 withStyle(SpanStyle(color = Color(0xFFFF6A00))) { append("兵") }
             },
-            color = Color(0xFF1A1A1A),
+            color = MaterialTheme.appColors.textPrimary,
             style = MaterialTheme.typography.headlineMedium
         )
         Spacer(Modifier.height(10.dp))
         Text(
             stringResource(R.string.empty_dashboard_desc),
-            color = Color(0xFF888888),
+            color = MaterialTheme.appColors.textTertiary,
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(Modifier.height(28.dp))

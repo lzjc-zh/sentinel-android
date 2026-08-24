@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.deepseek.lzjc.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun BalanceCard(
@@ -48,20 +49,20 @@ fun BalanceCard(
                 Icon(
                     Icons.Default.AccountBalanceWallet,
                     contentDescription = null,
-                    tint = Color(0xFF333333),
+                    tint = MaterialTheme.appColors.textPrimary,
                     modifier = Modifier.size(28.dp)
                 )
                 Text(
                     stringResource(R.string.balance_title),
                     modifier = Modifier.padding(start = 12.dp).weight(1f),
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFFE8ECF0))
+                        .background(MaterialTheme.appColors.card)
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -90,7 +91,7 @@ fun BalanceCard(
                     fontSize = 46.sp,
                     lineHeight = 50.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF000000)
+                    color = MaterialTheme.appColors.textPrimary
                 )
                 Spacer(Modifier.height(16.dp))
                 Row(
@@ -122,19 +123,19 @@ private fun BalanceUsageItem(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFFF0F2F5))
+            .background(MaterialTheme.appColors.surface)
             .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
         Text(
             title,
-            color = Color(0xFF666666),
+            color = MaterialTheme.appColors.textSecondary,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(5.dp))
         Text(
             amount,
-            color = Color(0xFF000000),
+            color = MaterialTheme.appColors.textPrimary,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold
         )
@@ -150,7 +151,7 @@ fun GlassPanel(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(radius.dp))
-            .background(Color(0xFFF5F7FA))
+            .background(MaterialTheme.appColors.surface)
     ) {
         content()
     }

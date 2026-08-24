@@ -88,6 +88,12 @@
     <string name="breakdown_output">输出</string>
     <string name="breakdown_requests">请求</string>
 
+    <!-- Theme -->
+    <string name="title_theme">外观</string>
+    <string name="theme_follow_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
     <!-- Widget -->
     <string name="widget_day_prefix">日 </string>
     <string name="widget_month_prefix">月 </string>

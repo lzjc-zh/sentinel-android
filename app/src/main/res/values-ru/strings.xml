@@ -86,7 +86,13 @@
     <string name="breakdown_output">Выход</string>
     <string name="breakdown_requests">Запросы</string>
 
-    <!-- Widget -->
+        <!-- Theme -->
+    <string name="title_theme">Appearance</string>
+    <string name="theme_follow_system">Follow System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+<!-- Widget -->
     <string name="widget_day_prefix">Д </string>
     <string name="widget_month_prefix">М </string>
 
@@ -94,3 +100,4 @@
     <string name="network_error">Ошибка сети</string>
     <string name="refresh_failed">Ошибка обновления</string>
 </resources>
+

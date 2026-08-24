@@ -29,6 +29,7 @@ import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.deepseek.lzjc.ui.theme.appColors
 
 @Composable
 fun TrendLineChart(
@@ -66,14 +67,14 @@ fun TrendLineChart(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.trend_title),
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
                     stringResource(R.string.trend_total, String.format("%.2f", total)),
-                    color = Color(0xFF333333),
+                    color = MaterialTheme.appColors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -81,6 +82,8 @@ fun TrendLineChart(
             Spacer(Modifier.height(8.dp))
 
             // 只在 size 或数据变化时才重建绘制指令
+            val accentColor = MaterialTheme.appColors.accent
+            val dividerColor = MaterialTheme.appColors.divider
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -94,7 +97,7 @@ fun TrendLineChart(
                 repeat(3) { line ->
                     val y = 8f + line * (chartHeight / 3f)
                     drawLine(
-                        color = Color.Black.copy(alpha = 0.08f),
+                        color = dividerColor,
                         start = Offset(0f, y),
                         end = Offset(chartWidth, y),
                         strokeWidth = 1f
@@ -128,14 +131,14 @@ fun TrendLineChart(
                 drawPath(
                     path = fillPath,
                     brush = Brush.verticalGradient(
-                        listOf(Color(0xFF4D6BFE).copy(alpha = 0.25f), Color.Transparent)
+                        listOf(accentColor.copy(alpha = 0.25f), Color.Transparent)
                     )
                 )
 
                 // 折线
                 drawPath(
                     path = linePath,
-                    color = Color(0xFF4D6BFE),
+                    color = accentColor,
                     style = Stroke(
                         width = 3f,
                         cap = StrokeCap.Round,
@@ -145,7 +148,7 @@ fun TrendLineChart(
 
                 // 数据点
                 points.forEach { point ->
-                    drawCircle(color = Color(0xFF4D6BFE), radius = 4f, center = point)
+                    drawCircle(color = accentColor, radius = 4f, center = point)
                     drawCircle(color = Color.White, radius = 2f, center = point)
                 }
 
@@ -167,7 +170,7 @@ fun TrendLineChart(
             ) {
                 Text(
                     stringResource(R.string.trend_daily_avg, String.format("%.2f", avg)),
-                    color = Color(0xFF666666),
+                    color = MaterialTheme.appColors.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)

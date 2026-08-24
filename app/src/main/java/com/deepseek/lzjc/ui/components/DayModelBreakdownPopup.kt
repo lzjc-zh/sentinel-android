@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.db.DailyModelBreakdown
+import com.deepseek.lzjc.ui.theme.appColors
 
 private val MODEL_COLORS = mapOf(
     "deepseek-v4-flash" to Color(0xFF19C9FF),
@@ -79,7 +80,7 @@ fun DayModelBreakdownPopup(
             Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
                 Text(
                     text = date,
-                    color = Color(0xFF1A1A1A),
+                    color = MaterialTheme.appColors.textPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -88,7 +89,7 @@ fun DayModelBreakdownPopup(
                 if (breakdowns.isEmpty()) {
                     Text(
                         stringResource(R.string.cache_no_data),
-                        color = Color(0xFF999999),
+                        color = MaterialTheme.appColors.textTertiary,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
@@ -104,7 +105,7 @@ fun DayModelBreakdownPopup(
                         ).forEach { label ->
                             Text(
                                 label,
-                                color = Color(0xFF999999),
+                                color = MaterialTheme.appColors.textTertiary,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 9.sp,
                                 modifier = Modifier.width(52.dp),
@@ -137,7 +138,7 @@ fun DayModelBreakdownPopup(
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = item.model,
-                                color = Color(0xFF333333),
+                                color = MaterialTheme.appColors.textPrimary,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f),
@@ -145,8 +146,8 @@ fun DayModelBreakdownPopup(
                             )
                             Text(formatTokens(item.cacheHitTokens), color = Color(0xFF10B981), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(52.dp), textAlign = TextAlign.Center)
                             Text(formatTokens(item.cacheMissTokens), color = Color(0xFFF59E0B), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(52.dp), textAlign = TextAlign.Center)
-                            Text(formatTokens(item.outputTokens), color = Color(0xFF4D6BFE), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(52.dp), textAlign = TextAlign.Center)
-                            Text(formatTokens(item.requestCount), color = Color(0xFF666666), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(52.dp), textAlign = TextAlign.Center)
+                            Text(formatTokens(item.outputTokens), color = MaterialTheme.appColors.accent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(52.dp), textAlign = TextAlign.Center)
+                            Text(formatTokens(item.requestCount), color = MaterialTheme.appColors.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(52.dp), textAlign = TextAlign.Center)
                         }
                     }
                 }
