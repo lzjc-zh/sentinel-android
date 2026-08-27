@@ -98,6 +98,11 @@ class AnalyticsViewModel @Inject constructor(
             Platform.DEEPSEEK -> refreshDeepSeek()
             Platform.MIMO -> refreshMiMo()
             Platform.ARK -> refreshArk()
+            Platform.GLM -> {
+                // GLM Analytics - just mark as loaded
+                hasLoaded = true
+                _state.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
         }
     }
 

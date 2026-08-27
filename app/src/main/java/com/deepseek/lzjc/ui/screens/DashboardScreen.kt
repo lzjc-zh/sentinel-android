@@ -83,6 +83,7 @@ import com.deepseek.lzjc.data.ark.ArkPlanOverview
 import com.deepseek.lzjc.data.db.DailyModelBreakdown
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
+import com.deepseek.lzjc.data.glm.GlmPlanOverview
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.mutableStateOf
@@ -130,6 +131,15 @@ fun DashboardScreen(
                     )
                 } else {
                     ArkDashboardContent(state = state, viewModel = viewModel)
+                }
+            }
+            Platform.GLM -> {
+                if (!state.glmHasApiKey) {
+                    GlmEmptyDashboard(
+                        onNavigateToSettings = onNavigateToSettings
+                    )
+                } else {
+                    GlmDashboardContent(state = state, viewModel = viewModel)
                 }
             }
         }
@@ -1507,5 +1517,228 @@ private fun formatArkDouble(value: Double): String {
         value >= 1_000 -> String.format("%.1fK", value / 1_000.0)
         value >= 1 -> String.format("%.1f", value)
         else -> String.format("%.2f", value)
+    }
+}
+
+// ===== GLM Dashboard =====
+
+@Composable
+private fun GlmEmptyDashboard(
+    onNavigateToSettings: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "🧠",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "智谱 GLM",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "请先在设置中配置 API Key",
+                color = MaterialTheme.appColors.textTertiary,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onNavigateToSettings,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GlmBlue,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("前往设置", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+private val GlmBlue = Color(0xFF134CFF)
+
+@Composable
+private fun GlmDashboardContent(
+    state: DashboardState,
+    viewModel: DashboardViewModel
+) {
+    if (state.isLoading) {
+        LoadingView()
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            // Header
+            item(key = "header") {
+                PlatformHeaderBar(
+                    currentPlatform = Platform.GLM,
+                    onPlatformChange = { viewModel.switchPlatform(it) },
+                    onRefresh = { viewModel.refresh() }
+                )
+            }
+
+            // Error message
+            state.errorMessage?.let { error ->
+                item(key = "error") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFEBEE), RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = error,
+                            color = Color(0xFFD32F2F),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            // GLM Plan info
+            state.glmPlan?.let { plan ->
+                item(key = "glm_plan") {
+                    GlmPlanCard(plan = plan)
+                }
+            }
+        }
+
+        if (state.isRefreshing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                RefreshAnimation(size = 36.dp, isAnimating = true)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlmPlanCard(plan: GlmPlanOverview) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                text = "GLM Coding Plan",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "套餐等级: ${plan.level.uppercase()}",
+                color = MaterialTheme.appColors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 5小时额度
+            GlmUsageRow(
+                label = "5小时额度",
+                percentage = plan.hour5Percentage
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // 每周额度
+            GlmUsageRow(
+                label = "每周额度",
+                percentage = plan.weeklyPercentage
+            )
+
+            // MCP 次数（如果有）
+            if (plan.mcpTotal > 0) {
+                Spacer(Modifier.height(12.dp))
+                GlmMcpRow(
+                    used = plan.mcpUsage,
+                    remaining = plan.mcpRemaining,
+                    total = plan.mcpTotal
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlmUsageRow(
+    label: String,
+    percentage: Double
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "已使用 ${percentage.toInt()}%",
+                color = MaterialTheme.appColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { (percentage.toFloat() / 100f).coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = GlmBlue,
+            trackColor = GlmBlue.copy(alpha = 0.2f)
+        )
+    }
+}
+
+@Composable
+private fun GlmMcpRow(
+    used: Long,
+    remaining: Long,
+    total: Long
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "MCP 每月次数",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "剩余 $remaining / $total",
+                color = MaterialTheme.appColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        val percentage = if (total > 0) (used.toDouble() / total.toDouble()) else 0.0
+        LinearProgressIndicator(
+            progress = { percentage.coerceIn(0.0, 1.0).toFloat() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = GlmBlue,
+            trackColor = GlmBlue.copy(alpha = 0.2f)
+        )
     }
 }

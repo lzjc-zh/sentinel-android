@@ -342,6 +342,23 @@ fun AnalyticsScreen(
                             }
                         }
                     }
+                    Platform.GLM -> {
+                        // GLM placeholder
+                        item(key = "glm_placeholder") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "GLM 用量分析 - 敬请期待",
+                                    color = MaterialTheme.appColors.textTertiary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

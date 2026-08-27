@@ -10,6 +10,8 @@ import com.deepseek.lzjc.data.api.PlatformApi
 import com.deepseek.lzjc.data.ark.ArkApi
 import com.deepseek.lzjc.data.ark.ArkApiClient
 import com.deepseek.lzjc.data.db.AppDatabase
+import com.deepseek.lzjc.data.glm.GlmApi
+import com.deepseek.lzjc.data.glm.GlmApiClient
 import com.deepseek.lzjc.data.db.UsageDao
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -29,6 +31,7 @@ import javax.inject.Singleton
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 private val Context.mimoDataStore: DataStore<Preferences> by preferencesDataStore(name = "mimo_settings")
 private val Context.arkDataStore: DataStore<Preferences> by preferencesDataStore(name = "ark_settings")
+private val Context.glmDataStore: DataStore<Preferences> by preferencesDataStore(name = "glm_settings")
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -198,5 +201,37 @@ object AppModule {
     @Singleton
     fun provideArkApiClient(arkApi: ArkApi, gson: Gson): ArkApiClient {
         return ArkApiClient(arkApi, gson)
+    }
+
+    // ===== GLM providers =====
+
+    @Provides
+    @Singleton
+    @Named("glm")
+    fun provideGlmDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return context.glmDataStore
+    }
+
+    @Provides
+    @Singleton
+    @Named("glm")
+    fun provideGlmRetrofit(client: OkHttpClient, gson: Gson): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://open.bigmodel.cn/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGlmApi(@Named("glm") retrofit: Retrofit): GlmApi {
+        return retrofit.create(GlmApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGlmApiClient(glmApi: GlmApi): GlmApiClient {
+        return GlmApiClient(glmApi)
     }
 }

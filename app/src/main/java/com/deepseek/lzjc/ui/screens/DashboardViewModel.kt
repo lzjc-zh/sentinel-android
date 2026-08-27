@@ -10,8 +10,10 @@ import com.deepseek.lzjc.data.ark.ArkPlanOverview
 import com.deepseek.lzjc.data.db.DailyModelBreakdown
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
+import com.deepseek.lzjc.data.glm.GlmPlanOverview
 import com.deepseek.lzjc.data.mimo.MiMoUsageData
 import com.deepseek.lzjc.data.repository.ArkRepository
+import com.deepseek.lzjc.data.repository.GlmRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +64,10 @@ data class DashboardState(
     val arkModelCosts: List<ModelCostSummary> = emptyList(),
     val arkModelBreakdowns: List<DailyModelBreakdown> = emptyList(),
     val arkTodayUsage: Long = 0,
-    val arkMonthlyUsage: Long = 0
+    val arkMonthlyUsage: Long = 0,
+    // GLM fields
+    val glmHasApiKey: Boolean = false,
+    val glmPlan: GlmPlanOverview? = null
 )
 
 @HiltViewModel
@@ -70,7 +75,8 @@ class DashboardViewModel @Inject constructor(
     private val application: Application,
     private val repository: UsageRepository,
     private val mimoRepository: MiMoRepository,
-    private val arkRepository: ArkRepository
+    private val arkRepository: ArkRepository,
+    private val glmRepository: GlmRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -130,6 +136,12 @@ class DashboardViewModel @Inject constructor(
                     if (hasArkKey) refreshArk()
                     else _state.update { it.copy(isLoading = false) }
                 }
+                Platform.GLM -> {
+                    val hasGlmKey = glmRepository.apiKey.first().isNotBlank()
+                    _state.update { it.copy(glmHasApiKey = hasGlmKey) }
+                    if (hasGlmKey) refreshGlm()
+                    else _state.update { it.copy(isLoading = false) }
+                }
             }
 
             // Listen for DeepSeek credential changes
@@ -169,6 +181,12 @@ class DashboardViewModel @Inject constructor(
                     if (hasKey) refreshArk()
                     else _state.update { it.copy(isLoading = false) }
                 }
+                Platform.GLM -> {
+                    val hasKey = glmRepository.apiKey.first().isNotBlank()
+                    _state.update { it.copy(glmHasApiKey = hasKey) }
+                    if (hasKey) refreshGlm()
+                    else _state.update { it.copy(isLoading = false) }
+                }
             }
         }
     }
@@ -203,6 +221,7 @@ class DashboardViewModel @Inject constructor(
             Platform.DEEPSEEK -> refreshDeepSeek()
             Platform.MIMO -> refreshMiMo()
             Platform.ARK -> refreshArk()
+            Platform.GLM -> refreshGlm()
         }
     }
 
@@ -351,6 +370,44 @@ class DashboardViewModel @Inject constructor(
                         arkTodayUsage = todayUsage,
                         arkMonthlyUsage = monthlyUsage
                     )
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = e.message ?: application.getString(R.string.network_error)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun refreshGlm() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, errorMessage = null) }
+
+            runCatching {
+                glmRepository.initApiKey()
+
+                val result = glmRepository.getPlanOverview()
+                result.onSuccess { plan ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            glmPlan = plan
+                        )
+                    }
+                }
+                result.onFailure { e ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            errorMessage = e.message ?: application.getString(R.string.network_error)
+                        )
+                    }
                 }
             }.onFailure { e ->
                 _state.update {
