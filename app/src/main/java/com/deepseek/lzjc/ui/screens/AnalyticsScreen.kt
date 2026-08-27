@@ -34,6 +34,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.Platform
+import com.deepseek.lzjc.data.glm.GlmPlanOverview
+import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
+import androidx.compose.material3.LinearProgressIndicator
 import com.deepseek.lzjc.ui.components.BalanceForecast
 import com.deepseek.lzjc.ui.components.CacheHitRateCard
 import com.deepseek.lzjc.ui.components.GlassPanel
@@ -51,6 +54,7 @@ import androidx.compose.material3.Card
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 
 private val MiMoOrange = Color(0xFFFF6A00)
+private val GlmBlue = Color(0xFF134CFF)
 
 @Composable
 private fun MiMoBalanceOverviewCard(
@@ -220,8 +224,16 @@ fun AnalyticsScreen(
                                         )
                                     },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = if (platform == Platform.MIMO) MiMoOrange.copy(alpha = 0.15f) else MaterialTheme.appColors.accent.copy(alpha = 0.15f),
-                                        selectedLabelColor = if (platform == Platform.MIMO) MiMoOrange else MaterialTheme.appColors.accent
+                                        selectedContainerColor = when (platform) {
+                                            Platform.MIMO -> MiMoOrange.copy(alpha = 0.15f)
+                                            Platform.GLM -> GlmBlue.copy(alpha = 0.15f)
+                                            else -> MaterialTheme.appColors.accent.copy(alpha = 0.15f)
+                                        },
+                                        selectedLabelColor = when (platform) {
+                                            Platform.MIMO -> MiMoOrange
+                                            Platform.GLM -> GlmBlue
+                                            else -> MaterialTheme.appColors.accent
+                                        }
                                     )
                                 )
                             }
@@ -343,19 +355,52 @@ fun AnalyticsScreen(
                         }
                     }
                     Platform.GLM -> {
-                        // GLM placeholder
-                        item(key = "glm_placeholder") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "GLM 用量分析 - 敬请期待",
-                                    color = MaterialTheme.appColors.textTertiary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
+                        // GLM Plan overview
+                        state.glmPlan?.let { plan ->
+                            item(key = "glm_overview") {
+                                GlmAnalyticsCard(plan = plan)
+                            }
+                        }
+
+                        if (state.glmPlan == null) {
+                            item(key = "glm_no_data") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "暂无 GLM 用量数据，请先在设置中配置 API Key",
+                                        color = MaterialTheme.appColors.textTertiary,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Platform.MINIMAX -> {
+                        // MiniMax Plan overview
+                        state.minimaxPlan?.let { plan ->
+                            item(key = "minimax_overview") {
+                                MiniMaxAnalyticsCard(plan = plan)
+                            }
+                        }
+
+                        if (state.minimaxPlan == null) {
+                            item(key = "minimax_no_data") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "暂无 MiniMax 用量数据，请先在设置中配置 API Key",
+                                        color = MaterialTheme.appColors.textTertiary,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
                             }
                         }
                     }
@@ -437,6 +482,81 @@ private fun ArkAFPOverviewCard(
     }
 }
 
+@Composable
+private fun GlmAnalyticsCard(plan: GlmPlanOverview) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "GLM Coding Plan 用量",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "套餐等级: ${plan.level.uppercase()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.appColors.textSecondary
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 5小时额度
+            QuotaRow(
+                label = "5小时额度",
+                percentage = plan.hour5Percentage
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // 每周额度
+            QuotaRow(
+                label = "每周额度",
+                percentage = plan.weeklyPercentage
+            )
+
+            // MCP 次数
+            if (plan.mcpTotal > 0) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("MCP 每月次数", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "${plan.mcpUsage} / ${plan.mcpTotal}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuotaRow(label: String, percentage: Double) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "已使用 ${String.format("%.1f", percentage)}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.appColors.textSecondary
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { (percentage / 100.0).toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp),
+            color = MaterialTheme.appColors.accent
+        )
+    }
+}
+
 private fun formatArkTokens(tokens: Long): String {
     return when {
         tokens >= 1_000_000 -> String.format("%.1fM", tokens / 1_000_000.0)
@@ -444,3 +564,78 @@ private fun formatArkTokens(tokens: Long): String {
         else -> tokens.toString()
     }
 }
+
+// ===== MiniMax Analytics Components =====
+
+@Composable
+private fun MiniMaxAnalyticsCard(plan: MiniMaxPlanOverview) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "MiniMax Token Plan 用量",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "套餐等级: ${plan.planType.uppercase()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.appColors.textSecondary
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 5小时额度
+            MiniMaxQuotaRow(
+                label = "5小时额度",
+                used = plan.hourUsed,
+                remaining = plan.hourRemaining,
+                limit = plan.hourLimit
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // 每周额度
+            MiniMaxQuotaRow(
+                label = "每周额度",
+                used = plan.weekUsed,
+                remaining = plan.weekRemaining,
+                limit = plan.weekLimit
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiniMaxQuotaRow(
+    label: String,
+    used: Long,
+    remaining: Long,
+    limit: Long
+) {
+    val percentage = if (limit > 0) (used.toDouble() / limit) else 0.0
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "剩余 $remaining",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.appColors.textSecondary
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { percentage.coerceIn(0.0, 1.0).toFloat() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp),
+            color = MiniMaxPurple,
+            trackColor = MiniMaxPurple.copy(alpha = 0.2f)
+        )
+    }
+}
+
+private val MiniMaxPurple = Color(0xFF6C5CE7)

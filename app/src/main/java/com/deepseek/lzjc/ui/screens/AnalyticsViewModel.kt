@@ -6,8 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.deepseek.lzjc.data.Platform
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
+import com.deepseek.lzjc.data.glm.GlmPlanOverview
+import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
 import com.deepseek.lzjc.data.repository.ArkRepository
+import com.deepseek.lzjc.data.repository.GlmRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
+import com.deepseek.lzjc.data.repository.MiniMaxRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,7 +63,12 @@ data class AnalyticsState(
     val arkTrendData: List<DailyUsageSummary> = emptyList(),
     val arkModelCosts: List<ModelCostSummary> = emptyList(),
     val arkTodayUsage: Long = 0,
-    val arkMonthlyUsage: Long = 0
+    val arkMonthlyUsage: Long = 0,
+    // GLM fields
+    val glmPlan: GlmPlanOverview? = null,
+    // MiniMax fields
+    val minimaxPlan: MiniMaxPlanOverview? = null,
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -67,7 +76,9 @@ class AnalyticsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val repository: UsageRepository,
     private val mimoRepository: MiMoRepository,
-    private val arkRepository: ArkRepository
+    private val arkRepository: ArkRepository,
+    private val glmRepository: GlmRepository,
+    private val miniMaxRepository: MiniMaxRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AnalyticsState())
@@ -98,11 +109,8 @@ class AnalyticsViewModel @Inject constructor(
             Platform.DEEPSEEK -> refreshDeepSeek()
             Platform.MIMO -> refreshMiMo()
             Platform.ARK -> refreshArk()
-            Platform.GLM -> {
-                // GLM Analytics - just mark as loaded
-                hasLoaded = true
-                _state.update { it.copy(isLoading = false, isRefreshing = false) }
-            }
+            Platform.GLM -> refreshGlm()
+            Platform.MINIMAX -> refreshMiniMax()
         }
     }
 
@@ -268,6 +276,80 @@ class AnalyticsViewModel @Inject constructor(
                         arkTodayUsage = todayUsage,
                         arkMonthlyUsage = monthlyUsage
                     )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
+        }
+    }
+
+    private fun refreshGlm() {
+        viewModelScope.launch {
+            if (hasLoaded) {
+                _state.update { it.copy(isRefreshing = true) }
+            } else {
+                _state.update { it.copy(isLoading = true) }
+            }
+
+            try {
+                glmRepository.initApiKey()
+
+                val result = glmRepository.getPlanOverview()
+                result.onSuccess { plan ->
+                    hasLoaded = true
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            glmPlan = plan
+                        )
+                    }
+                }
+                result.onFailure { e ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            errorMessage = e.message
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
+        }
+    }
+
+    private fun refreshMiniMax() {
+        viewModelScope.launch {
+            if (hasLoaded) {
+                _state.update { it.copy(isRefreshing = true) }
+            } else {
+                _state.update { it.copy(isLoading = true) }
+            }
+
+            try {
+                miniMaxRepository.initApiKey()
+
+                val result = miniMaxRepository.getPlanOverview()
+                result.onSuccess { plan ->
+                    hasLoaded = true
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            minimaxPlan = plan
+                        )
+                    }
+                }
+                result.onFailure { e ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            errorMessage = e.message
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, isRefreshing = false) }

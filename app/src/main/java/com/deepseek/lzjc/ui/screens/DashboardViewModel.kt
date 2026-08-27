@@ -12,9 +12,11 @@ import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
 import com.deepseek.lzjc.data.glm.GlmPlanOverview
 import com.deepseek.lzjc.data.mimo.MiMoUsageData
+import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
 import com.deepseek.lzjc.data.repository.ArkRepository
 import com.deepseek.lzjc.data.repository.GlmRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
+import com.deepseek.lzjc.data.repository.MiniMaxRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,7 +69,10 @@ data class DashboardState(
     val arkMonthlyUsage: Long = 0,
     // GLM fields
     val glmHasApiKey: Boolean = false,
-    val glmPlan: GlmPlanOverview? = null
+    val glmPlan: GlmPlanOverview? = null,
+    // MiniMax fields
+    val minimaxHasApiKey: Boolean = false,
+    val minimaxPlan: MiniMaxPlanOverview? = null
 )
 
 @HiltViewModel
@@ -76,7 +81,8 @@ class DashboardViewModel @Inject constructor(
     private val repository: UsageRepository,
     private val mimoRepository: MiMoRepository,
     private val arkRepository: ArkRepository,
-    private val glmRepository: GlmRepository
+    private val glmRepository: GlmRepository,
+    private val miniMaxRepository: MiniMaxRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -92,6 +98,8 @@ class DashboardViewModel @Inject constructor(
             val mimoLoggedIn = mimoRepository.isLoggedIn()
             val hasDeepSeekKey = repository.apiKey.first().isNotBlank()
             val hasArkKey = arkRepository.accessKeyId.first().isNotBlank()
+            val hasGlmKey = glmRepository.apiKey.first().isNotBlank()
+            val hasMiniMaxKey = miniMaxRepository.apiKey.first().isNotBlank()
 
             // Auto-select platform
             val isFirstLaunch = !prefs.getBoolean(Platform.PREF_FIRST_LAUNCH, false)
@@ -100,7 +108,9 @@ class DashboardViewModel @Inject constructor(
                     mimoLoggedIn -> Platform.MIMO
                     hasDeepSeekKey -> Platform.DEEPSEEK
                     hasArkKey -> Platform.ARK
-                    else -> Platform.MIMO
+                    hasGlmKey -> Platform.GLM
+                    hasMiniMaxKey -> Platform.MINIMAX
+                    else -> Platform.DEEPSEEK
                 }.also {
                     prefs.edit()
                         .putString(Platform.PREF_KEY, it.key)
@@ -113,14 +123,24 @@ class DashboardViewModel @Inject constructor(
                     saved == Platform.DEEPSEEK && hasDeepSeekKey -> saved
                     saved == Platform.MIMO && mimoLoggedIn -> saved
                     saved == Platform.ARK && hasArkKey -> saved
+                    saved == Platform.GLM && hasGlmKey -> saved
+                    saved == Platform.MINIMAX && hasMiniMaxKey -> saved
                     mimoLoggedIn -> Platform.MIMO
                     hasDeepSeekKey -> Platform.DEEPSEEK
                     hasArkKey -> Platform.ARK
+                    hasGlmKey -> Platform.GLM
+                    hasMiniMaxKey -> Platform.MINIMAX
                     else -> saved
                 }
             }
 
-            _state.update { it.copy(currentPlatform = platform, mimoLoggedIn = mimoLoggedIn, arkHasCredentials = hasArkKey) }
+            _state.update { it.copy(
+                currentPlatform = platform,
+                mimoLoggedIn = mimoLoggedIn,
+                arkHasCredentials = hasArkKey,
+                glmHasApiKey = hasGlmKey,
+                minimaxHasApiKey = hasMiniMaxKey
+            ) }
 
             // Auto-refresh based on platform
             when (platform) {
@@ -140,6 +160,10 @@ class DashboardViewModel @Inject constructor(
                     val hasGlmKey = glmRepository.apiKey.first().isNotBlank()
                     _state.update { it.copy(glmHasApiKey = hasGlmKey) }
                     if (hasGlmKey) refreshGlm()
+                    else _state.update { it.copy(isLoading = false) }
+                }
+                Platform.MINIMAX -> {
+                    if (hasMiniMaxKey) refreshMiniMax()
                     else _state.update { it.copy(isLoading = false) }
                 }
             }
@@ -187,6 +211,12 @@ class DashboardViewModel @Inject constructor(
                     if (hasKey) refreshGlm()
                     else _state.update { it.copy(isLoading = false) }
                 }
+                Platform.MINIMAX -> {
+                    val hasKey = miniMaxRepository.apiKey.first().isNotBlank()
+                    _state.update { it.copy(minimaxHasApiKey = hasKey) }
+                    if (hasKey) refreshMiniMax()
+                    else _state.update { it.copy(isLoading = false) }
+                }
             }
         }
     }
@@ -222,6 +252,7 @@ class DashboardViewModel @Inject constructor(
             Platform.MIMO -> refreshMiMo()
             Platform.ARK -> refreshArk()
             Platform.GLM -> refreshGlm()
+            Platform.MINIMAX -> refreshMiniMax()
         }
     }
 
@@ -383,12 +414,39 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    /** 重新检查凭证状态（设置页保存后调用） */
+    fun recheckCredentials() {
+        viewModelScope.launch {
+            val hasGlmKey = glmRepository.apiKey.first().isNotBlank()
+            val hasArkKey = arkRepository.accessKeyId.first().isNotBlank()
+            val hasDeepSeekKey = repository.apiKey.first().isNotBlank()
+            val mimoLoggedIn = mimoRepository.isLoggedIn()
+            _state.update {
+                it.copy(
+                    glmHasApiKey = hasGlmKey,
+                    arkHasCredentials = hasArkKey,
+                    hasApiKey = hasDeepSeekKey,
+                    mimoLoggedIn = mimoLoggedIn
+                )
+            }
+        }
+    }
+
     private fun refreshGlm() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true, errorMessage = null) }
 
             runCatching {
                 glmRepository.initApiKey()
+
+                // 重新检查凭证
+                val hasKey = glmRepository.apiKey.first().isNotBlank()
+                _state.update { it.copy(glmHasApiKey = hasKey) }
+
+                if (!hasKey) {
+                    _state.update { it.copy(isRefreshing = false, isLoading = false) }
+                    return@runCatching
+                }
 
                 val result = glmRepository.getPlanOverview()
                 result.onSuccess { plan ->
@@ -397,6 +455,53 @@ class DashboardViewModel @Inject constructor(
                             isLoading = false,
                             isRefreshing = false,
                             glmPlan = plan
+                        )
+                    }
+                }
+                result.onFailure { e ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            errorMessage = e.message ?: application.getString(R.string.network_error)
+                        )
+                    }
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = e.message ?: application.getString(R.string.network_error)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun refreshMiniMax() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, errorMessage = null) }
+
+            runCatching {
+                miniMaxRepository.initApiKey()
+
+                // 重新检查凭证
+                val hasKey = miniMaxRepository.apiKey.first().isNotBlank()
+                _state.update { it.copy(minimaxHasApiKey = hasKey) }
+
+                if (!hasKey) {
+                    _state.update { it.copy(isRefreshing = false, isLoading = false) }
+                    return@runCatching
+                }
+
+                val result = miniMaxRepository.getPlanOverview()
+                result.onSuccess { plan ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            minimaxPlan = plan
                         )
                     }
                 }

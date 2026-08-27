@@ -1,12 +1,12 @@
 # 哨兵 (Sentinel)
 
-AI 用量监控 Android 应用，支持 **DeepSeek**、**MiMo** 和 **火山方舟** 三平台。
+AI 用量监控 Android 应用，支持 **DeepSeek**、**MiMo**、**火山方舟**、**智谱GLM** 和 **MiniMax** 五平台。
 
 ## 功能
 
 - **Dashboard** — 余额/额度、Token 消耗、每日柱状图、点触查看模型详情
 - **Analytics** — 趋势图、模型饼图、缓存命中率、余额预估
-- **三平台** — DeepSeek (API/Platform) + MiMo (小米) + 火山方舟 (Agent Plan)
+- **五平台** — DeepSeek (API/Platform) + MiMo (小米) + 火山方舟 (Agent Plan) + 智谱GLM (Coding Plan) + MiniMax (Token Plan)
 - **桌面小组件** — 余额/消耗快速查看
 - **多语言** — 中/英/日/韩/德/法/西/意/俄/土/越/繁中
 
@@ -17,6 +17,8 @@ AI 用量监控 Android 应用，支持 **DeepSeek**、**MiMo** 和 **火山方�
 | DeepSeek | API + Platform | 余额、Token 消耗、缓存命中率 |
 | MiMo | 小米平台 | 余额、Token 消耗、缓存命中率 |
 | 火山方舟 | Agent Plan API | 套餐信息、AFP 额度、Token 消耗 |
+| 智谱GLM | Coding Plan API | 套餐等级、5小时/每周额度 |
+| MiniMax | Token Plan API | 套餐等级、5小时/每周额度 |
 
 ## 架构
 

@@ -71,7 +71,9 @@ import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.Platform
 import com.deepseek.lzjc.data.mimo.MiMoCookieManager
 import com.deepseek.lzjc.data.repository.ArkRepository
+import com.deepseek.lzjc.data.repository.GlmRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
+import com.deepseek.lzjc.data.repository.MiniMaxRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import com.deepseek.lzjc.util.LanguageOption
 import com.deepseek.lzjc.util.findLanguageByCode
@@ -89,7 +91,9 @@ class SettingsViewModel @Inject constructor(
     private val application: android.app.Application,
     private val repository: UsageRepository,
     private val mimoRepository: MiMoRepository,
-    private val arkRepository: ArkRepository
+    private val arkRepository: ArkRepository,
+    private val glmRepository: GlmRepository,
+    private val miniMaxRepository: MiniMaxRepository
 ) : ViewModel() {
 
     var apiKey by mutableStateOf("")
@@ -105,6 +109,12 @@ class SettingsViewModel @Inject constructor(
         private set
     var arkSecretAccessKey by mutableStateOf("")
         private set
+    // GLM fields
+    var glmApiKey by mutableStateOf("")
+        private set
+    // MiniMax fields
+    var minimaxApiKey by mutableStateOf("")
+        private set
 
     init {
         viewModelScope.launch {
@@ -113,6 +123,8 @@ class SettingsViewModel @Inject constructor(
             mimoLoggedIn = mimoRepository.isLoggedIn()
             arkAccessKeyId = arkRepository.accessKeyId.first()
             arkSecretAccessKey = arkRepository.secretAccessKey.first()
+            glmApiKey = glmRepository.apiKey.first()
+            minimaxApiKey = miniMaxRepository.apiKey.first()
             val prefs = application.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
             currentPlatform = Platform.fromKey(prefs.getString("current_platform", "deepseek") ?: "deepseek")
         }
@@ -126,12 +138,20 @@ class SettingsViewModel @Inject constructor(
         userToken = token
     }
 
+    fun updateGlmApiKey(key: String) {
+        glmApiKey = key
+    }
+
     fun updateArkAccessKeyId(key: String) {
         arkAccessKeyId = key
     }
 
     fun updateArkSecretAccessKey(key: String) {
         arkSecretAccessKey = key
+    }
+
+    fun updateMiniMaxApiKey(key: String) {
+        minimaxApiKey = key
     }
 
     fun switchPlatform(platform: Platform) {
@@ -144,14 +164,26 @@ class SettingsViewModel @Inject constructor(
             val token = userToken.trim()
             if (key.isNotBlank()) repository.saveApiKey(key)
             if (token.isNotBlank()) repository.saveUserToken(token)
-            
+
             // Save Ark credentials
             val arkKey = arkAccessKeyId.trim()
             val arkSecret = arkSecretAccessKey.trim()
             if (arkKey.isNotBlank() && arkSecret.isNotBlank()) {
                 arkRepository.saveCredentials(arkKey, arkSecret)
             }
-            
+
+            // Save GLM credentials
+            val glmKey = glmApiKey.trim()
+            if (glmKey.isNotBlank()) {
+                glmRepository.saveApiKey(glmKey)
+            }
+
+            // Save MiniMax credentials
+            val minimaxKey = minimaxApiKey.trim()
+            if (minimaxKey.isNotBlank()) {
+                miniMaxRepository.saveApiKey(minimaxKey)
+            }
+
             prefs.edit().putString("current_platform", currentPlatform.key).apply()
             onSuccess()
         }
@@ -480,6 +512,120 @@ fun SettingsScreen(
                 }
             }
 
+        }
+
+        // GLM settings (shown only when GLM is selected)
+        if (viewModel.currentPlatform == Platform.GLM) {
+            SettingsPanel {
+                Text(
+                    "智谱 GLM API 设置",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(14.dp))
+
+                var showGlmKey by remember { mutableStateOf(false) }
+
+                SecretField(
+                    value = viewModel.glmApiKey,
+                    onValueChange = viewModel::updateGlmApiKey,
+                    label = "API Key",
+                    placeholder = "输入智谱 API Key",
+                    visible = showGlmKey,
+                    onToggleVisible = { showGlmKey = !showGlmKey },
+                    accent = Color(0xFF134CFF)
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        val prefs = context.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
+                        viewModel.save(onSaveSuccess ?: onBack ?: {}, prefs)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF134CFF),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(stringResource(R.string.btn_save), fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            SettingsPanel {
+                Text(
+                    "使用说明",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "API Key 用于查询 GLM Coding Plan 用量。\n\n获取方式：\n1. 登录 https://bigmodel.cn\n2. 进入「API Key 管理」页面\n3. 创建或复制 API Key\n\n获取后可查看：\n• 套餐等级（Lite/Pro/Max）\n• 5小时额度使用率\n• 每周额度使用率\n• MCP 工具调用次数",
+                    color = MaterialTheme.appColors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        // MiniMax settings (shown only when MiniMax is selected)
+        if (viewModel.currentPlatform == Platform.MINIMAX) {
+            SettingsPanel {
+                Text(
+                    "MiniMax API 设置",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(14.dp))
+
+                var showMiniMaxKey by remember { mutableStateOf(false) }
+
+                SecretField(
+                    value = viewModel.minimaxApiKey,
+                    onValueChange = viewModel::updateMiniMaxApiKey,
+                    label = "API Key",
+                    placeholder = "输入 MiniMax API Key",
+                    visible = showMiniMaxKey,
+                    onToggleVisible = { showMiniMaxKey = !showMiniMaxKey },
+                    accent = Color(0xFF6C5CE7)
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        val prefs = context.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
+                        viewModel.save(onSaveSuccess ?: onBack ?: {}, prefs)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF6C5CE7),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(stringResource(R.string.btn_save), fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            SettingsPanel {
+                Text(
+                    "使用说明",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "API Key 用于查询 MiniMax Token Plan 用量。\n\n获取方式：\n1. 登录 https://platform.minimaxi.com\n2. 进入「Token Plan」页面\n3. 获取「订阅 Key」\n\n获取后可查看：\n• 套餐等级（Plus/Max/Ultra）\n• 5小时额度使用情况\n• 每周额度使用情况",
+                    color = MaterialTheme.appColors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
         // Theme settings

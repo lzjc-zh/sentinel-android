@@ -84,6 +84,7 @@ import com.deepseek.lzjc.data.db.DailyModelBreakdown
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
 import com.deepseek.lzjc.data.glm.GlmPlanOverview
+import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.mutableStateOf
@@ -105,42 +106,22 @@ fun DashboardScreen(
     ) {
         when (state.currentPlatform) {
             Platform.DEEPSEEK -> {
-                if (!state.hasApiKey) {
-                    EmptyDashboard(
-                        onNavigateToSettings = onNavigateToSettings,
-                        onSwitchToMiMo = { viewModel.switchPlatform(Platform.MIMO) }
-                    )
-                } else {
-                    DashboardContent(state = state, viewModel = viewModel)
-                }
+                DashboardContent(state = state, viewModel = viewModel)
             }
             Platform.MIMO -> {
-                if (!state.mimoLoggedIn) {
-                    MiMoLoginDashboard(
-                        onLoginSuccess = { viewModel.onMiMoLoginSuccess() },
-                        onSwitchToDeepSeek = { viewModel.switchPlatform(Platform.DEEPSEEK) }
-                    )
-                } else {
-                    MiMoDashboardContent(state = state, viewModel = viewModel)
-                }
+                MiMoDashboardContent(state = state, viewModel = viewModel)
             }
             Platform.ARK -> {
-                if (!state.arkHasCredentials) {
-                    ArkEmptyDashboard(
-                        onNavigateToSettings = onNavigateToSettings
-                    )
-                } else {
-                    ArkDashboardContent(state = state, viewModel = viewModel)
-                }
+                ArkDashboardContent(state = state, viewModel = viewModel)
             }
             Platform.GLM -> {
-                if (!state.glmHasApiKey) {
-                    GlmEmptyDashboard(
-                        onNavigateToSettings = onNavigateToSettings
-                    )
-                } else {
-                    GlmDashboardContent(state = state, viewModel = viewModel)
-                }
+                GlmDashboardContent(state = state, viewModel = viewModel, onNavigateToSettings = onNavigateToSettings)
+            }
+            Platform.MINIMAX -> {
+                MiniMaxDashboardContent(state = state, viewModel = viewModel, onNavigateToSettings = onNavigateToSettings)
+            }
+            else -> {
+                DashboardContent(state = state, viewModel = viewModel)
             }
         }
     }
@@ -1566,8 +1547,14 @@ private val GlmBlue = Color(0xFF134CFF)
 @Composable
 private fun GlmDashboardContent(
     state: DashboardState,
-    viewModel: DashboardViewModel
+    viewModel: DashboardViewModel,
+    onNavigateToSettings: () -> Unit = {}
 ) {
+    // 每次进入此页面重新检查凭证（设置页保存后返回时生效）
+    LaunchedEffect(Unit) {
+        viewModel.recheckCredentials()
+    }
+
     if (state.isLoading) {
         LoadingView()
     } else {
@@ -1578,7 +1565,7 @@ private fun GlmDashboardContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            // Header
+            // Header (使用统一的 PlatformHeaderBar)
             item(key = "header") {
                 PlatformHeaderBar(
                     currentPlatform = Platform.GLM,
@@ -1609,6 +1596,34 @@ private fun GlmDashboardContent(
             state.glmPlan?.let { plan ->
                 item(key = "glm_plan") {
                     GlmPlanCard(plan = plan)
+                }
+            }
+
+            // 若未配置 API Key 或报错，显示设置入口
+            if (!state.glmHasApiKey) {
+                item(key = "glm_setup") {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "请先在设置中配置 API Key",
+                                color = MaterialTheme.appColors.textSecondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = onNavigateToSettings,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GlmBlue,
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text("前往设置", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1739,6 +1754,185 @@ private fun GlmMcpRow(
                 .height(6.dp),
             color = GlmBlue,
             trackColor = GlmBlue.copy(alpha = 0.2f)
+        )
+    }
+}
+
+// ===== MiniMax Dashboard =====
+
+private val MiniMaxPurple = Color(0xFF6C5CE7)
+
+@Composable
+private fun MiniMaxDashboardContent(
+    state: DashboardState,
+    viewModel: DashboardViewModel,
+    onNavigateToSettings: () -> Unit = {}
+) {
+    // 每次进入此页面重新检查凭证
+    LaunchedEffect(Unit) {
+        viewModel.recheckCredentials()
+    }
+
+    if (state.isLoading) {
+        LoadingView()
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            // Header
+            item(key = "header") {
+                PlatformHeaderBar(
+                    currentPlatform = Platform.MINIMAX,
+                    onPlatformChange = { viewModel.switchPlatform(it) },
+                    onRefresh = { viewModel.refresh() }
+                )
+            }
+
+            // Error message
+            state.errorMessage?.let { error ->
+                item(key = "error") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFEBEE), RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = error,
+                            color = Color(0xFFD32F2F),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            // MiniMax Plan info
+            state.minimaxPlan?.let { plan ->
+                item(key = "minimax_plan") {
+                    MiniMaxPlanCard(plan = plan)
+                }
+            }
+
+            // 若未配置 API Key，显示设置入口
+            if (!state.minimaxHasApiKey) {
+                item(key = "minimax_setup") {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "请先在设置中配置 API Key",
+                                color = MaterialTheme.appColors.textSecondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = onNavigateToSettings,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MiniMaxPurple,
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text("前往设置", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (state.isRefreshing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                RefreshAnimation(size = 36.dp, isAnimating = true)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniMaxPlanCard(plan: MiniMaxPlanOverview) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                text = "MiniMax Token Plan",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "套餐等级: ${plan.planType.uppercase()}",
+                color = MaterialTheme.appColors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 5小时额度
+            MiniMaxUsageRow(
+                label = "5小时额度",
+                used = plan.hourUsed,
+                remaining = plan.hourRemaining,
+                limit = plan.hourLimit
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // 每周额度
+            MiniMaxUsageRow(
+                label = "每周额度",
+                used = plan.weekUsed,
+                remaining = plan.weekRemaining,
+                limit = plan.weekLimit
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiniMaxUsageRow(
+    label: String,
+    used: Long,
+    remaining: Long,
+    limit: Long
+) {
+    val percentage = if (limit > 0) (used.toDouble() / limit) else 0.0
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "剩余 $remaining",
+                color = MaterialTheme.appColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { percentage.coerceIn(0.0, 1.0).toFloat() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = MiniMaxPurple,
+            trackColor = MiniMaxPurple.copy(alpha = 0.2f)
         )
     }
 }

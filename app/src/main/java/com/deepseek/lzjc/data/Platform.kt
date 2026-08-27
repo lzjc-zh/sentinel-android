@@ -7,7 +7,8 @@ enum class Platform(val displayName: String, val key: String) {
     DEEPSEEK("DeepSeek", "deepseek"),
     MIMO("MiMo", "mimo"),
     ARK("火山方舟", "ark"),
-    GLM("智谱GLM", "glm");
+    GLM("智谱GLM", "glm"),
+    MINIMAX("MiniMax", "minimax");
 
     companion object {
         fun fromKey(key: String): Platform =

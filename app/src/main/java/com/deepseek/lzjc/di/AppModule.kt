@@ -13,6 +13,8 @@ import com.deepseek.lzjc.data.db.AppDatabase
 import com.deepseek.lzjc.data.glm.GlmApi
 import com.deepseek.lzjc.data.glm.GlmApiClient
 import com.deepseek.lzjc.data.db.UsageDao
+import com.deepseek.lzjc.data.minimax.MiniMaxApi
+import com.deepseek.lzjc.data.minimax.MiniMaxApiClient
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -32,6 +34,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 private val Context.mimoDataStore: DataStore<Preferences> by preferencesDataStore(name = "mimo_settings")
 private val Context.arkDataStore: DataStore<Preferences> by preferencesDataStore(name = "ark_settings")
 private val Context.glmDataStore: DataStore<Preferences> by preferencesDataStore(name = "glm_settings")
+private val Context.minimaxDataStore: DataStore<Preferences> by preferencesDataStore(name = "minimax_settings")
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -233,5 +236,37 @@ object AppModule {
     @Singleton
     fun provideGlmApiClient(glmApi: GlmApi): GlmApiClient {
         return GlmApiClient(glmApi)
+    }
+
+    // ===== MiniMax providers =====
+
+    @Provides
+    @Singleton
+    @Named("minimax")
+    fun provideMiniMaxDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return context.minimaxDataStore
+    }
+
+    @Provides
+    @Singleton
+    @Named("minimax")
+    fun provideMiniMaxRetrofit(client: OkHttpClient, gson: Gson): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://www.minimaxi.com/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMiniMaxApi(@Named("minimax") retrofit: Retrofit): MiniMaxApi {
+        return retrofit.create(MiniMaxApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMiniMaxApiClient(miniMaxApi: MiniMaxApi): MiniMaxApiClient {
+        return MiniMaxApiClient(miniMaxApi)
     }
 }
