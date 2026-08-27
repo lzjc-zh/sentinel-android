@@ -5,7 +5,8 @@ package com.deepseek.lzjc.data
  */
 enum class Platform(val displayName: String, val key: String) {
     DEEPSEEK("DeepSeek", "deepseek"),
-    MIMO("MiMo", "mimo");
+    MIMO("MiMo", "mimo"),
+    ARK("火山方舟", "ark");
 
     companion object {
         fun fromKey(key: String): Platform =

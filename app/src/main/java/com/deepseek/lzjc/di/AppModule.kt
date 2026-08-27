@@ -7,8 +7,12 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.deepseek.lzjc.data.api.DeepSeekApi
 import com.deepseek.lzjc.data.api.PlatformApi
+import com.deepseek.lzjc.data.ark.ArkApi
+import com.deepseek.lzjc.data.ark.ArkApiClient
 import com.deepseek.lzjc.data.db.AppDatabase
 import com.deepseek.lzjc.data.db.UsageDao
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,10 +28,17 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 private val Context.mimoDataStore: DataStore<Preferences> by preferencesDataStore(name = "mimo_settings")
+private val Context.arkDataStore: DataStore<Preferences> by preferencesDataStore(name = "ark_settings")
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson {
+        return GsonBuilder().setLenient().create()
+    }
 
     @Provides
     @Singleton
@@ -45,11 +56,11 @@ object AppModule {
     @Provides
     @Singleton
     @Named("api")
-    fun provideRetrofit(client: OkHttpClient): Retrofit {
+    fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit {
         return Retrofit.Builder()
             .baseUrl("https://api.deepseek.com/")
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 
@@ -141,5 +152,51 @@ object AppModule {
             .readTimeout(30, TimeUnit.SECONDS)
             .connectionPool(okhttp3.ConnectionPool(0, 1, TimeUnit.SECONDS))
             .build()
+    }
+
+    // ===== Ark providers =====
+
+    @Provides
+    @Singleton
+    @Named("ark")
+    fun provideArkDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return context.arkDataStore
+    }
+
+    @Provides
+    @Singleton
+    @Named("ark")
+    fun provideArkOkHttpClient(): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        return OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @Named("ark")
+    fun provideArkRetrofit(@Named("ark") client: OkHttpClient, gson: Gson): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://ark.cn-beijing.volcengineapi.com/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideArkApi(@Named("ark") retrofit: Retrofit): ArkApi {
+        return retrofit.create(ArkApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideArkApiClient(arkApi: ArkApi, gson: Gson): ArkApiClient {
+        return ArkApiClient(arkApi, gson)
     }
 }

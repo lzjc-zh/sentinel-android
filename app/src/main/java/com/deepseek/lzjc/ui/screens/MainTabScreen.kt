@@ -18,8 +18,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.deepseek.lzjc.ui.theme.appColors
@@ -47,55 +51,61 @@ fun MainTabScreen() {
     )
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
+    var showAbout by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = MaterialTheme.appColors.background,
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.appColors.surface,
-                tonalElevation = 0.dp
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            coroutineScope.launch { pagerState.scrollToPage(index) }
-                        },
-                        icon = { Icon(tab.icon, contentDescription = tab.title) },
-                        label = { Text(tab.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.appColors.accent,
-                            selectedTextColor = MaterialTheme.appColors.accent,
-                            unselectedIconColor = MaterialTheme.appColors.textTertiary,
-                            unselectedTextColor = MaterialTheme.appColors.textTertiary,
-                            indicatorColor = MaterialTheme.appColors.accentLight
+    if (showAbout) {
+        AboutScreen(onBack = { showAbout = false })
+    } else {
+        Scaffold(
+            containerColor = MaterialTheme.appColors.background,
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.appColors.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    tabs.forEachIndexed { index, tab ->
+                        NavigationBarItem(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch { pagerState.scrollToPage(index) }
+                            },
+                            icon = { Icon(tab.icon, contentDescription = tab.title) },
+                            label = { Text(tab.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.appColors.accent,
+                                selectedTextColor = MaterialTheme.appColors.accent,
+                                unselectedIconColor = MaterialTheme.appColors.textTertiary,
+                                unselectedTextColor = MaterialTheme.appColors.textTertiary,
+                                indicatorColor = MaterialTheme.appColors.accentLight
+                            )
                         )
-                    )
+                    }
                 }
             }
-        }
-    ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) { page ->
-            key(page) {
-                when (page) {
-                    0 -> DashboardScreen(
-                        onNavigateToSettings = {
-                            coroutineScope.launch { pagerState.scrollToPage(3) }
-                        }
-                    )
-                    1 -> AnalyticsScreen()
-                    2 -> ChatScreen()
-                    3 -> SettingsScreen(
-                        onBack = null,
-                        onSaveSuccess = {
-                            coroutineScope.launch { pagerState.scrollToPage(0) }
-                        }
-                    )
+        ) { padding ->
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) { page ->
+                key(page) {
+                    when (page) {
+                        0 -> DashboardScreen(
+                            onNavigateToSettings = {
+                                coroutineScope.launch { pagerState.scrollToPage(3) }
+                            }
+                        )
+                        1 -> AnalyticsScreen()
+                        2 -> ChatScreen()
+                        3 -> SettingsScreen(
+                            onBack = null,
+                            onSaveSuccess = {
+                                coroutineScope.launch { pagerState.scrollToPage(0) }
+                            },
+                            onNavigateToAbout = { showAbout = true }
+                        )
+                    }
                 }
             }
         }

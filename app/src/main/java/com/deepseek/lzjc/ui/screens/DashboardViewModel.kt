@@ -4,19 +4,16 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.Platform
+import com.deepseek.lzjc.data.ark.ArkPlanOverview
 import com.deepseek.lzjc.data.db.DailyModelBreakdown
 import com.deepseek.lzjc.data.db.DailyUsageSummary
+import com.deepseek.lzjc.data.db.ModelCostSummary
 import com.deepseek.lzjc.data.mimo.MiMoUsageData
+import com.deepseek.lzjc.data.repository.ArkRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
-import com.deepseek.lzjc.data.worker.RefreshWorker
-import com.deepseek.lzjc.ui.widget.WidgetDataCache
-import com.deepseek.lzjc.util.NotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +27,6 @@ import kotlinx.coroutines.yield
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class DashboardState(
@@ -58,7 +54,15 @@ data class DashboardState(
     val mimoDailyData: List<DailyUsageSummary> = emptyList(),
     val mimoDailyRequests: Long = 0,
     val mimoMonthlyRequests: Long = 0,
-    val mimoModelBreakdowns: List<DailyModelBreakdown> = emptyList()
+    val mimoModelBreakdowns: List<DailyModelBreakdown> = emptyList(),
+    // Ark fields
+    val arkHasCredentials: Boolean = false,
+    val arkPlan: ArkPlanOverview? = null,
+    val arkDailyData: List<DailyUsageSummary> = emptyList(),
+    val arkModelCosts: List<ModelCostSummary> = emptyList(),
+    val arkModelBreakdowns: List<DailyModelBreakdown> = emptyList(),
+    val arkTodayUsage: Long = 0,
+    val arkMonthlyUsage: Long = 0
 )
 
 @HiltViewModel
@@ -66,7 +70,7 @@ class DashboardViewModel @Inject constructor(
     private val application: Application,
     private val repository: UsageRepository,
     private val mimoRepository: MiMoRepository,
-    private val widgetDataCache: WidgetDataCache
+    private val arkRepository: ArkRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -81,15 +85,16 @@ class DashboardViewModel @Inject constructor(
             // Check credential availability
             val mimoLoggedIn = mimoRepository.isLoggedIn()
             val hasDeepSeekKey = repository.apiKey.first().isNotBlank()
+            val hasArkKey = arkRepository.accessKeyId.first().isNotBlank()
 
-            // Auto-select platform: prefer saved choice, fallback to whichever has credentials
+            // Auto-select platform
             val isFirstLaunch = !prefs.getBoolean(Platform.PREF_FIRST_LAUNCH, false)
             val platform = if (isFirstLaunch) {
-                // First launch: auto-detect, prefer MiMo if logged in
                 when {
                     mimoLoggedIn -> Platform.MIMO
                     hasDeepSeekKey -> Platform.DEEPSEEK
-                    else -> Platform.MIMO  // default to MiMo login prompt
+                    hasArkKey -> Platform.ARK
+                    else -> Platform.MIMO
                 }.also {
                     prefs.edit()
                         .putString(Platform.PREF_KEY, it.key)
@@ -98,39 +103,45 @@ class DashboardViewModel @Inject constructor(
                 }
             } else {
                 val saved = Platform.fromKey(prefs.getString(Platform.PREF_KEY, "deepseek") ?: "deepseek")
-                // If saved platform has no credentials, try the other one
                 when {
                     saved == Platform.DEEPSEEK && hasDeepSeekKey -> saved
                     saved == Platform.MIMO && mimoLoggedIn -> saved
+                    saved == Platform.ARK && hasArkKey -> saved
                     mimoLoggedIn -> Platform.MIMO
                     hasDeepSeekKey -> Platform.DEEPSEEK
-                    else -> saved  // show login/empty state for saved platform
+                    hasArkKey -> Platform.ARK
+                    else -> saved
                 }
             }
 
-            _state.update { it.copy(currentPlatform = platform, mimoLoggedIn = mimoLoggedIn) }
+            _state.update { it.copy(currentPlatform = platform, mimoLoggedIn = mimoLoggedIn, arkHasCredentials = hasArkKey) }
 
+            // Auto-refresh based on platform
+            when (platform) {
+                Platform.DEEPSEEK -> {
+                    if (hasDeepSeekKey) refreshDeepSeek()
+                    else _state.update { it.copy(isLoading = false) }
+                }
+                Platform.MIMO -> {
+                    if (mimoLoggedIn) refreshMiMo()
+                    else _state.update { it.copy(isLoading = false) }
+                }
+                Platform.ARK -> {
+                    if (hasArkKey) refreshArk()
+                    else _state.update { it.copy(isLoading = false) }
+                }
+            }
+
+            // Listen for DeepSeek credential changes
             combine(repository.apiKey, repository.userToken) { key, token -> key to token }
                 .distinctUntilChanged()
                 .collect { (key, token) ->
                     _state.update {
                         it.copy(hasApiKey = key.isNotBlank(), hasUserToken = token.isNotBlank())
                     }
-                    if (_state.value.currentPlatform == Platform.DEEPSEEK) {
-                        if (key.isNotBlank()) {
-                            yield()
-                            refreshDeepSeek()
-                            schedulePeriodicRefresh()
-                        } else {
-                            _state.update { it.copy(isLoading = false, isRefreshing = false) }
-                        }
-                    } else {
-                        if (mimoLoggedIn) {
-                            yield()
-                            refreshMiMo()
-                        } else {
-                            _state.update { it.copy(isLoading = false, isRefreshing = false) }
-                        }
+                    if (_state.value.currentPlatform == Platform.DEEPSEEK && key.isNotBlank()) {
+                        yield()
+                        refreshDeepSeek()
                     }
                 }
         }
@@ -150,6 +161,12 @@ class DashboardViewModel @Inject constructor(
                     val loggedIn = mimoRepository.isLoggedIn()
                     _state.update { it.copy(mimoLoggedIn = loggedIn) }
                     if (loggedIn) refreshMiMo()
+                    else _state.update { it.copy(isLoading = false) }
+                }
+                Platform.ARK -> {
+                    val hasKey = arkRepository.accessKeyId.first().isNotBlank()
+                    _state.update { it.copy(arkHasCredentials = hasKey) }
+                    if (hasKey) refreshArk()
                     else _state.update { it.copy(isLoading = false) }
                 }
             }
@@ -181,21 +198,11 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun schedulePeriodicRefresh() {
-        runCatching {
-            val request = PeriodicWorkRequestBuilder<RefreshWorker>(6, TimeUnit.HOURS).build()
-            WorkManager.getInstance(application).enqueueUniquePeriodicWork(
-                "balance_refresh",
-                ExistingPeriodicWorkPolicy.KEEP,
-                request
-            )
-        }
-    }
-
     fun refresh() {
         when (_state.value.currentPlatform) {
             Platform.DEEPSEEK -> refreshDeepSeek()
             Platform.MIMO -> refreshMiMo()
+            Platform.ARK -> refreshArk()
         }
     }
 
@@ -235,22 +242,14 @@ class DashboardViewModel @Inject constructor(
                 val data = repository.getDailyUsageSince(fromDate).first()
                 val modelBreakdowns = repository.getDailyModelBreakdowns(7)
 
-                // Detect token issue: balance refreshed but zero usage data
-                if (errorMsg == null && data.isEmpty() && dailyCost == 0.0 && monthlyCost == 0.0) {
-                    val hasUserToken = repository.userToken.first().isNotBlank()
-                    if (hasUserToken) {
-                        errorMsg = "Usage token expired, showing balance only. Please update in Settings."
-                    }
-                }
-
                 _state.update {
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
+                        errorMessage = errorMsg,
                         totalBalance = totalBalance,
                         grantedBalance = grantedBalance,
                         toppedUpBalance = toppedUpBalance,
-                        errorMessage = errorMsg,
                         dailyCost = String.format("%.2f", dailyCost),
                         monthlyCost = String.format("%.2f", monthlyCost),
                         flashTokens = flashTokens,
@@ -261,34 +260,12 @@ class DashboardViewModel @Inject constructor(
                         modelBreakdowns = modelBreakdowns
                     )
                 }
-
-                // Update widget
-                val currentState = _state.value
-                widgetDataCache.saveDeepSeekData(
-                    balance = currentState.totalBalance,
-                    dailyCost = currentState.dailyCost,
-                    monthlyCost = currentState.monthlyCost,
-                    dailyRequests = currentState.dailyRequests,
-                    monthlyRequests = currentState.monthlyRequests
-                )
-
-                // Balance threshold notification
-                val thresholdStr = prefs.getString("balance_threshold", "") ?: ""
-                if (thresholdStr.isNotBlank()) {
-                    val threshold = thresholdStr.toFloatOrNull()
-                    val balance = currentState.totalBalance.toFloatOrNull()
-                    if (threshold != null && balance != null && balance < threshold) {
-                        NotificationHelper.showBalanceAlert(
-                            application, currentState.totalBalance, thresholdStr
-                        )
-                    }
-                }
             }.onFailure { e ->
                 _state.update {
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMessage = e.message ?: application.getString(R.string.refresh_failed)
+                        errorMessage = e.message ?: application.getString(R.string.network_error)
                     )
                 }
             }
@@ -305,28 +282,24 @@ class DashboardViewModel @Inject constructor(
                     val today = dateFormat.format(System.currentTimeMillis())
                     val month = monthFormat.format(System.currentTimeMillis())
 
-                    val dailyData = mimoRepository.getDailyCostList(30)
-                    val dailyRequests = mimoRepository.getDailyRequestCount(today)
-                    val monthlyRequests = mimoRepository.getMonthlyRequestCount(month)
-                    val modelBreakdowns = mimoRepository.getDailyModelBreakdowns(7)
-
                     _state.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
                             mimoData = data,
-                            mimoDailyData = dailyData,
-                            mimoDailyRequests = dailyRequests,
-                            mimoMonthlyRequests = monthlyRequests,
-                            mimoModelBreakdowns = modelBreakdowns
+                            mimoDailyData = mimoRepository.getDailyCostList(30),
+                            mimoDailyRequests = mimoRepository.getDailyRequestCount(today),
+                            mimoMonthlyRequests = mimoRepository.getMonthlyRequestCount(month),
+                            mimoModelBreakdowns = mimoRepository.getDailyModelBreakdowns(7)
                         )
                     }
-                }.onFailure { e ->
+                }
+                result.onFailure { e ->
                     _state.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            errorMessage = "获取数据失败: ${e.message}"
+                            errorMessage = e.message ?: application.getString(R.string.network_error)
                         )
                     }
                 }
@@ -335,7 +308,56 @@ class DashboardViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMessage = e.message ?: application.getString(R.string.refresh_failed)
+                        errorMessage = e.message ?: application.getString(R.string.network_error)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun refreshArk() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, errorMessage = null) }
+
+            runCatching {
+                arkRepository.initCredentials()
+
+                val planResult = arkRepository.getPlanOverview()
+                val usageResult = arkRepository.fetchRecentUsage(30)
+
+                var plan: ArkPlanOverview? = null
+                var errorMsg: String? = null
+
+                planResult.onSuccess { plan = it }
+                planResult.onFailure { e -> errorMsg = e.message }
+
+                usageResult.onFailure { e -> if (errorMsg == null) errorMsg = e.message }
+
+                val dailyData = arkRepository.getDailyUsageList(30)
+                val modelCosts = arkRepository.getModelUsageSummary(30)
+                val modelBreakdowns = arkRepository.getDailyModelBreakdowns(7)
+                val todayUsage = arkRepository.getTodayUsage()
+                val monthlyUsage = arkRepository.getMonthlyUsage()
+
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = errorMsg,
+                        arkPlan = plan,
+                        arkDailyData = dailyData,
+                        arkModelCosts = modelCosts,
+                        arkModelBreakdowns = modelBreakdowns,
+                        arkTodayUsage = todayUsage,
+                        arkMonthlyUsage = monthlyUsage
+                    )
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = e.message ?: application.getString(R.string.network_error)
                     )
                 }
             }

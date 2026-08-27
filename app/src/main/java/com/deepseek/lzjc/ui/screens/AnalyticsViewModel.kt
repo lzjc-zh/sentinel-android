@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.deepseek.lzjc.data.Platform
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
+import com.deepseek.lzjc.data.repository.ArkRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,14 +54,20 @@ data class AnalyticsState(
     val mimoSubscriptionTokenTrend: List<DailyUsageSummary> = emptyList(),
     val mimoModelCosts: List<ModelCostSummary> = emptyList(),
     val mimoDailyRequests: Long = 0,
-    val mimoMonthlyRequests: Long = 0
+    val mimoMonthlyRequests: Long = 0,
+    // Ark fields
+    val arkTrendData: List<DailyUsageSummary> = emptyList(),
+    val arkModelCosts: List<ModelCostSummary> = emptyList(),
+    val arkTodayUsage: Long = 0,
+    val arkMonthlyUsage: Long = 0
 )
 
 @HiltViewModel
 class AnalyticsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val repository: UsageRepository,
-    private val mimoRepository: MiMoRepository
+    private val mimoRepository: MiMoRepository,
+    private val arkRepository: ArkRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AnalyticsState())
@@ -90,6 +97,7 @@ class AnalyticsViewModel @Inject constructor(
         when (_state.value.currentPlatform) {
             Platform.DEEPSEEK -> refreshDeepSeek()
             Platform.MIMO -> refreshMiMo()
+            Platform.ARK -> refreshArk()
         }
     }
 
@@ -217,6 +225,43 @@ class AnalyticsViewModel @Inject constructor(
                         mimoCacheMissTokens = cacheMiss,
                         mimoDailyRequests = dailyRequests,
                         mimoMonthlyRequests = monthlyRequests
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
+        }
+    }
+
+    private fun refreshArk() {
+        viewModelScope.launch {
+            if (hasLoaded) {
+                _state.update { it.copy(isRefreshing = true) }
+            } else {
+                _state.update { it.copy(isLoading = true) }
+            }
+
+            try {
+                arkRepository.initCredentials()
+
+                // Fetch recent usage data
+                arkRepository.fetchRecentUsage(30)
+
+                // Get data
+                val trendData = arkRepository.getDailyUsageList(30)
+                val modelCosts = arkRepository.getModelUsageSummary(30)
+                val todayUsage = arkRepository.getTodayUsage()
+                val monthlyUsage = arkRepository.getMonthlyUsage()
+
+                hasLoaded = true
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        arkTrendData = trendData,
+                        arkModelCosts = modelCosts,
+                        arkTodayUsage = todayUsage,
+                        arkMonthlyUsage = monthlyUsage
                     )
                 }
             } catch (e: Exception) {

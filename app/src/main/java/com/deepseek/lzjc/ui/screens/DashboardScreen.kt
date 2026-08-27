@@ -65,8 +65,27 @@ import com.deepseek.lzjc.ui.components.DailyBarChart
 import com.deepseek.lzjc.ui.components.DayModelBreakdownPopup
 import com.deepseek.lzjc.ui.components.GlassPanel
 import com.deepseek.lzjc.ui.components.ModelTokenRow
+import com.deepseek.lzjc.ui.components.DayModelBreakdownPopup
 import com.deepseek.lzjc.ui.components.RefreshAnimation
 import com.deepseek.lzjc.ui.theme.appColors
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.nativeCanvas
+import com.deepseek.lzjc.data.ark.ArkPlanOverview
+import com.deepseek.lzjc.data.db.DailyModelBreakdown
+import com.deepseek.lzjc.data.db.DailyUsageSummary
+import com.deepseek.lzjc.data.db.ModelCostSummary
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import androidx.compose.runtime.mutableStateOf
 
 // MiMo accent color
 private val MiMoOrange = Color(0xFFFF6A00)
@@ -102,6 +121,15 @@ fun DashboardScreen(
                     )
                 } else {
                     MiMoDashboardContent(state = state, viewModel = viewModel)
+                }
+            }
+            Platform.ARK -> {
+                if (!state.arkHasCredentials) {
+                    ArkEmptyDashboard(
+                        onNavigateToSettings = onNavigateToSettings
+                    )
+                } else {
+                    ArkDashboardContent(state = state, viewModel = viewModel)
                 }
             }
         }
@@ -899,5 +927,585 @@ private fun EmptyDashboard(
         ) {
             Text("Switch to MiMo", fontWeight = FontWeight.SemiBold)
         }
+    }
+}
+
+// ===== Ark Dashboard =====
+
+@Composable
+private fun ArkEmptyDashboard(
+    onNavigateToSettings: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "🌋",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "火山方舟",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "请先在设置中配置 Access Key",
+                color = MaterialTheme.appColors.textTertiary,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onNavigateToSettings,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ArkOrange,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("前往设置", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+private val ArkOrange = Color(0xFFFF6B35)
+
+@Composable
+private fun ArkDashboardContent(
+    state: DashboardState,
+    viewModel: DashboardViewModel
+) {
+    if (state.isLoading) {
+        LoadingView()
+    } else {
+        var selectedDay by remember { mutableStateOf<String?>(null) }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                // Header
+                item(key = "header") {
+                    PlatformHeaderBar(
+                        currentPlatform = Platform.ARK,
+                        onPlatformChange = { viewModel.switchPlatform(it) },
+                        onRefresh = { viewModel.refresh() }
+                    )
+                }
+
+                // Error message
+                state.errorMessage?.let { error ->
+                    item(key = "error") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFFEBEE), RoundedCornerShape(8.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = error,
+                                color = Color(0xFFD32F2F),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+
+                // Plan info card
+                state.arkPlan?.let { plan ->
+                    item(key = "plan") {
+                        ArkPlanCard(plan = plan)
+                    }
+                }
+
+                // AFP usage card
+                state.arkPlan?.let { plan ->
+                    item(key = "afp") {
+                        ArkAFPCard(plan = plan)
+                    }
+                }
+
+                // Today & Monthly usage
+                item(key = "usage") {
+                    ArkUsageCard(
+                        todayUsage = state.arkTodayUsage,
+                        monthlyUsage = state.arkMonthlyUsage
+                    )
+                }
+
+                // 7-day bar chart
+                if (state.arkDailyData.isNotEmpty()) {
+                    item(key = "chart") {
+                        ArkDailyChart(
+                            dailyData = state.arkDailyData,
+                            onBarTap = { date -> selectedDay = date }
+                        )
+                    }
+                }
+
+                // AFP Usage Details (5h/week/month)
+                state.arkPlan?.let { plan ->
+                    item(key = "afp_details") {
+                        ArkAFPDetailsCard(plan = plan)
+                    }
+                }
+            }
+
+            // Model breakdown popup
+            selectedDay?.let { date ->
+                val breakdownsForDay = remember(date, state.arkModelBreakdowns) {
+                    state.arkModelBreakdowns.filter { it.date == date }
+                }
+                DayModelBreakdownPopup(
+                    date = date,
+                    breakdowns = breakdownsForDay,
+                    onDismiss = { selectedDay = null }
+                )
+            }
+
+            if (state.isRefreshing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    RefreshAnimation(size = 36.dp, isAnimating = true)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArkPlanCard(plan: ArkPlanOverview) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = ArkOrange.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Agent Plan",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (plan.status == "Running") Color(0xFF4CAF50) else Color(0xFFFF5722)
+                ) {
+                    Text(
+                        text = if (plan.status == "Running") "运行中" else plan.status,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                ArkInfoItem("套餐类型", plan.planType)
+                ArkInfoItem("到期时间", plan.endTime.substringBefore("T"))
+                ArkInfoItem("自动续费", if (plan.autoRenew) "是" else "否")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArkInfoItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.appColors.textTertiary
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun ArkAFPCard(plan: ArkPlanOverview) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "AFP 额度",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+            
+            LinearProgressIndicator(
+                progress = { plan.usagePercentage },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = ArkOrange,
+                trackColor = ArkOrange.copy(alpha = 0.2f)
+            )
+            
+            Spacer(Modifier.height(8.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "已用: ${String.format("%.1f", plan.usedAFP)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "剩余: ${String.format("%.1f", plan.remainingAFP)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "总计: ${String.format("%.1f", plan.totalAFP)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            
+            Spacer(Modifier.height(12.dp))
+            
+            // Detail breakdown
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ArkAFPDetail("5小时", plan.afp5hUsed, plan.afp5hQuota)
+                ArkAFPDetail("本周", plan.afp1wUsed, plan.afp1wQuota)
+                ArkAFPDetail("本月", plan.afp1mUsed, plan.afp1mQuota)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArkAFPDetail(label: String, used: Double, quota: Double) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.appColors.textTertiary
+        )
+        Text(
+            text = "${String.format("%.0f", used)}/${String.format("%.0f", quota)}",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun ArkUsageCard(todayUsage: Long, monthlyUsage: Long) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "今日用量",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+                Text(
+                    text = formatTokenCount(todayUsage),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Tokens",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "本月用量",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+                Text(
+                    text = formatTokenCount(monthlyUsage),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Tokens",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArkDailyChart(
+    dailyData: List<DailyUsageSummary>,
+    onBarTap: (String) -> Unit = {}
+) {
+    val visibleData = remember(dailyData) { rememberLastSevenDaysData(dailyData) }
+    val total = visibleData.sumOf { it.totalTokens }
+
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "消耗趋势",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "合计 ${formatArkTokens(total)}",
+                    color = MaterialTheme.appColors.textPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+
+            val maxTokens = visibleData.maxOfOrNull { it.totalTokens }?.coerceAtLeast(1L) ?: 1L
+            val themeColors = MaterialTheme.appColors
+
+            // 缓存 Paint 对象
+            val valuePaint = remember {
+                android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(230, 255, 255, 255)
+                    textSize = 28f
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+            }
+            val labelPaint = remember {
+                android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(200, 180, 180, 180)
+                    textSize = 31f
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+            }
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(184.dp)
+                    .pointerInput(visibleData) {
+                        detectTapGestures { offset ->
+                            val slotWidth = size.width.toFloat() / visibleData.size
+                            val index = (offset.x / slotWidth).toInt().coerceIn(0, visibleData.size - 1)
+                            onBarTap(visibleData[index].date)
+                        }
+                    }
+            ) {
+                val chartHeight = size.height - 54f
+                val slotWidth = size.width / visibleData.size
+                val barWidth = slotWidth * 0.56f
+                val baseY = chartHeight + 12f
+
+                // 网格线
+                repeat(3) { line ->
+                    val y = 28f + line * (chartHeight / 3f)
+                    drawLine(
+                        color = themeColors.divider,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 2f
+                    )
+                }
+
+                visibleData.forEachIndexed { index, item ->
+                    val barHeight = (item.totalTokens.toFloat() / maxTokens) * (chartHeight - 28f)
+                    val x = index * slotWidth + (slotWidth - barWidth) / 2
+                    val y = baseY - barHeight
+
+                    // 柱子
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(listOf(Color(0xFFFF8A50), Color(0xFFFF6B35))),
+                        topLeft = Offset(x, y),
+                        size = Size(barWidth, barHeight.coerceAtLeast(8f)),
+                        cornerRadius = CornerRadius(14f, 14f)
+                    )
+                    // 高光
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.22f),
+                        topLeft = Offset(x + 1f, y),
+                        size = Size(barWidth - 2f, 10f),
+                        cornerRadius = CornerRadius(14f, 14f)
+                    )
+
+                    // 数值和日期
+                    drawContext.canvas.nativeCanvas.apply {
+                        drawText(formatArkTokens(item.totalTokens), x + barWidth / 2, 28f, valuePaint)
+                        val monthDay = item.date.takeLast(5).split("-")
+                        drawText("${monthDay[0].toInt()}/${monthDay[1].toInt()}", x + barWidth / 2, size.height - 4f, labelPaint)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+private fun formatTokenCount(count: Long): String {
+    return when {
+        count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
+        count >= 1_000 -> String.format("%.1fK", count / 1_000.0)
+        else -> count.toString()
+    }
+}
+
+private fun formatArkTokens(tokens: Long): String {
+    return when {
+        tokens >= 1_000_000 -> String.format("%.1fM", tokens / 1_000_000.0)
+        tokens >= 1_000 -> String.format("%.1fK", tokens / 1_000.0)
+        else -> tokens.toString()
+    }
+}
+
+private fun rememberLastSevenDaysData(dailyData: List<DailyUsageSummary>): List<DailyUsageSummary> {
+    val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+    val byDate = dailyData.associateBy { it.date }
+    val today = LocalDate.now()
+
+    return (6 downTo 0).map { daysAgo ->
+        val date = today.minusDays(daysAgo.toLong()).format(formatter)
+        byDate[date] ?: DailyUsageSummary(
+            date = date,
+            totalTokens = 0,
+            costAmount = 0.0
+        )
+    }
+}
+
+@Composable
+private fun ArkAFPDetailsCard(plan: ArkPlanOverview) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                text = "Agent燃料值（AFP）用量",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "套餐内AFP实时用量统计数据",
+                color = MaterialTheme.appColors.textTertiary,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 近5小时用量
+            AFPUsageRow(
+                label = "近5小时用量",
+                used = plan.afp5hUsed,
+                quota = plan.afp5hQuota
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // 近一周用量
+            AFPUsageRow(
+                label = "近一周用量",
+                used = plan.afp1wUsed,
+                quota = plan.afp1wQuota
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // 近一月用量
+            AFPUsageRow(
+                label = "近一月用量",
+                used = plan.afp1mUsed,
+                quota = plan.afp1mQuota
+            )
+        }
+    }
+}
+
+@Composable
+private fun AFPUsageRow(
+    label: String,
+    used: Double,
+    quota: Double
+) {
+    val percentage = if (quota > 0) (used / quota * 100).toInt() else 0
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "已使用 $percentage%",
+                color = MaterialTheme.appColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${formatArkDouble(used)} / ${formatArkDouble(quota)}",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { (percentage / 100f).coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = ArkOrange,
+            trackColor = ArkOrange.copy(alpha = 0.2f)
+        )
+    }
+}
+
+private fun formatArkDouble(value: Double): String {
+    return when {
+        value >= 1_000_000 -> String.format("%.1f万", value / 10_000.0)
+        value >= 10_000 -> String.format("%.1f万", value / 10_000.0)
+        value >= 1_000 -> String.format("%.1fK", value / 1_000.0)
+        value >= 1 -> String.format("%.1f", value)
+        else -> String.format("%.2f", value)
     }
 }

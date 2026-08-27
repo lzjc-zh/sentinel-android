@@ -43,6 +43,12 @@ import com.deepseek.lzjc.ui.components.RefreshAnimation
 import com.deepseek.lzjc.ui.components.RequestCountCard
 import com.deepseek.lzjc.ui.components.TrendLineChart
 import com.deepseek.lzjc.ui.theme.appColors
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.material3.Card
+import com.deepseek.lzjc.data.db.DailyUsageSummary
 
 private val MiMoOrange = Color(0xFFFF6A00)
 
@@ -309,6 +315,33 @@ fun AnalyticsScreen(
                             }
                         }
                     }
+                    Platform.ARK -> {
+                        // Ark AFP overview
+                        item(key = "ark_afp") {
+                            ArkAFPOverviewCard(
+                                todayUsage = state.arkTodayUsage,
+                                monthlyUsage = state.arkMonthlyUsage
+                            )
+                        }
+
+                        // 30-day trend chart (using existing TrendLineChart)
+                        if (state.arkTrendData.isNotEmpty()) {
+                            item(key = "ark_trend") {
+                                TrendLineChart(dailyData = state.arkTrendData)
+                            }
+                        }
+
+                        // Model token usage pie chart
+                        if (state.arkModelCosts.isNotEmpty()) {
+                            item(key = "ark_pie") {
+                                ModelPieChart(
+                                    modelCosts = state.arkModelCosts,
+                                    useTokens = true,
+                                    title = "模型 Token 占比"
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -323,5 +356,74 @@ fun AnalyticsScreen(
                 RefreshAnimation(size = 36.dp, isAnimating = true)
             }
         }
+    }
+}
+
+// ===== Ark Analytics Components =====
+
+@Composable
+private fun ArkAFPOverviewCard(
+    todayUsage: Long,
+    monthlyUsage: Long
+) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                text = "AFP 用量概览",
+                color = MaterialTheme.appColors.textPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "今日用量",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textSecondary
+                    )
+                    Text(
+                        text = formatArkTokens(todayUsage),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.appColors.textPrimary
+                    )
+                    Text(
+                        text = "Tokens",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "本月用量",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textSecondary
+                    )
+                    Text(
+                        text = formatArkTokens(monthlyUsage),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.appColors.textPrimary
+                    )
+                    Text(
+                        text = "Tokens",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatArkTokens(tokens: Long): String {
+    return when {
+        tokens >= 1_000_000 -> String.format("%.1fM", tokens / 1_000_000.0)
+        tokens >= 1_000 -> String.format("%.1fK", tokens / 1_000.0)
+        else -> tokens.toString()
     }
 }

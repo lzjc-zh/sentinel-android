@@ -9,6 +9,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -56,8 +58,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -66,6 +70,7 @@ import com.deepseek.lzjc.LocalThemeMode
 import com.deepseek.lzjc.R
 import com.deepseek.lzjc.data.Platform
 import com.deepseek.lzjc.data.mimo.MiMoCookieManager
+import com.deepseek.lzjc.data.repository.ArkRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
 import com.deepseek.lzjc.data.repository.UsageRepository
 import com.deepseek.lzjc.util.LanguageOption
@@ -83,7 +88,8 @@ private val MiMoOrange = Color(0xFFFF6A00)
 class SettingsViewModel @Inject constructor(
     private val application: android.app.Application,
     private val repository: UsageRepository,
-    private val mimoRepository: MiMoRepository
+    private val mimoRepository: MiMoRepository,
+    private val arkRepository: ArkRepository
 ) : ViewModel() {
 
     var apiKey by mutableStateOf("")
@@ -94,12 +100,19 @@ class SettingsViewModel @Inject constructor(
         private set
     var mimoLoggedIn by mutableStateOf(false)
         private set
+    // Ark fields
+    var arkAccessKeyId by mutableStateOf("")
+        private set
+    var arkSecretAccessKey by mutableStateOf("")
+        private set
 
     init {
         viewModelScope.launch {
             apiKey = repository.apiKey.first()
             userToken = repository.userToken.first()
             mimoLoggedIn = mimoRepository.isLoggedIn()
+            arkAccessKeyId = arkRepository.accessKeyId.first()
+            arkSecretAccessKey = arkRepository.secretAccessKey.first()
             val prefs = application.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
             currentPlatform = Platform.fromKey(prefs.getString("current_platform", "deepseek") ?: "deepseek")
         }
@@ -113,6 +126,14 @@ class SettingsViewModel @Inject constructor(
         userToken = token
     }
 
+    fun updateArkAccessKeyId(key: String) {
+        arkAccessKeyId = key
+    }
+
+    fun updateArkSecretAccessKey(key: String) {
+        arkSecretAccessKey = key
+    }
+
     fun switchPlatform(platform: Platform) {
         currentPlatform = platform
     }
@@ -123,6 +144,14 @@ class SettingsViewModel @Inject constructor(
             val token = userToken.trim()
             if (key.isNotBlank()) repository.saveApiKey(key)
             if (token.isNotBlank()) repository.saveUserToken(token)
+            
+            // Save Ark credentials
+            val arkKey = arkAccessKeyId.trim()
+            val arkSecret = arkSecretAccessKey.trim()
+            if (arkKey.isNotBlank() && arkSecret.isNotBlank()) {
+                arkRepository.saveCredentials(arkKey, arkSecret)
+            }
+            
             prefs.edit().putString("current_platform", currentPlatform.key).apply()
             onSuccess()
         }
@@ -148,6 +177,7 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(
     onBack: (() -> Unit)?,
     onSaveSuccess: (() -> Unit)? = null,
+    onNavigateToAbout: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -396,6 +426,62 @@ fun SettingsScreen(
             }
         }
 
+        // Ark settings (shown only when Ark is selected)
+        if (viewModel.currentPlatform == Platform.ARK) {
+            SettingsPanel {
+                Text(
+                    "火山方舟 API 设置",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(14.dp))
+
+                var showArkKey by remember { mutableStateOf(false) }
+                var showArkSecret by remember { mutableStateOf(false) }
+
+                SecretField(
+                    value = viewModel.arkAccessKeyId,
+                    onValueChange = viewModel::updateArkAccessKeyId,
+                    label = "Access Key ID",
+                    placeholder = "AKLT...",
+                    visible = showArkKey,
+                    onToggleVisible = { showArkKey = !showArkKey },
+                    accent = Color(0xFFFF6B35)
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                SecretField(
+                    value = viewModel.arkSecretAccessKey,
+                    onValueChange = viewModel::updateArkSecretAccessKey,
+                    label = "Secret Access Key",
+                    placeholder = "输入 Secret Access Key",
+                    visible = showArkSecret,
+                    onToggleVisible = { showArkSecret = !showArkSecret },
+                    accent = Color(0xFFFF6B35)
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        val prefs = context.getSharedPreferences("whale_prefs", Context.MODE_PRIVATE)
+                        viewModel.save(onSaveSuccess ?: onBack ?: {}, prefs)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF6B35),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(stringResource(R.string.btn_save), fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+        }
+
         // Theme settings
         SettingsPanel {
             val ctx = LocalContext.current
@@ -439,74 +525,27 @@ fun SettingsScreen(
             }
         }
 
-        // About
+        // About (clickable)
         SettingsPanel {
-            val ctx = LocalContext.current
-            val versionName = remember {
-                try {
-                    ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
-                } catch (_: Exception) { "?" }
-            }
-            Text(
-                stringResource(R.string.about_title),
-                color = MaterialTheme.appColors.textPrimary,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(10.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToAbout?.invoke() },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "哨兵",
+                    stringResource(R.string.about_title),
                     color = MaterialTheme.appColors.textPrimary,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "v$versionName",
+                    ">",
                     color = MaterialTheme.appColors.textTertiary,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.about_description),
-                color = MaterialTheme.appColors.textSecondary,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        // Open-source credits
-        SettingsPanel {
-            Text(
-                "致谢",
-                color = MaterialTheme.appColors.textPrimary,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(10.dp))
-            CreditItem(
-                name = "SeekFlow",
-                author = "DavidBlon",
-                desc = "DeepSeek API 余额与用量监控",
-                url = "github.com/DavidBlon/SeekFlow"
-            )
-            Spacer(Modifier.height(8.dp))
-            CreditItem(
-                name = "MiMo-Tracker",
-                author = "TheMoDev",
-                desc = "小米 MiMo 平台用量追踪器",
-                url = "github.com/TheMoDev/MiMo-Tracker"
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "本应用基于上述开源项目整合开发，\n感谢原作者的杰出贡献。",
-                color = MaterialTheme.appColors.textTertiary,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
 
         // Language settings (always shown)
@@ -770,3 +809,5 @@ private fun SecretField(
         )
     )
 }
+
+
