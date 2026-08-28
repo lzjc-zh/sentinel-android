@@ -676,29 +676,6 @@ private fun MiniMaxAnalyticsDetailCard(plan: MiniMaxPlanOverview) {
                     )
                 }
             }
-            Spacer(Modifier.height(16.dp))
-
-            // 今日 / 近7天 / 近30天 统计卡片
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MiniMaxStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "今日",
-                    value = formatMiniMaxTokenCount(plan.todayUsage)
-                )
-                MiniMaxStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "近7天",
-                    value = formatMiniMaxTokenCount(plan.week7Usage)
-                )
-                MiniMaxStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "近30天",
-                    value = formatMiniMaxTokenCount(plan.week30Usage)
-                )
-            }
         }
     }
 }

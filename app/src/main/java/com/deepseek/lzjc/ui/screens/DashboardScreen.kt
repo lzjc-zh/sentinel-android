@@ -1915,31 +1915,6 @@ private fun MiniMaxPlanCard(plan: MiniMaxPlanOverview) {
             )
 
             Spacer(Modifier.height(20.dp))
-
-            // 统计数据卡片
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // 今日
-                MiniMaxStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "今日",
-                    value = formatTokenCount(plan.todayUsage)
-                )
-                // 近7天
-                MiniMaxStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "近7天",
-                    value = formatTokenCount(plan.week7Usage)
-                )
-                // 近30天
-                MiniMaxStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "近30天",
-                    value = formatTokenCount(plan.week30Usage)
-                )
-            }
         }
     }
 }

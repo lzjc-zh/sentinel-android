@@ -1,6 +1,50 @@
 package com.deepseek.lzjc.data.minimax
 
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import java.lang.reflect.Type
+
+// ===== 通用 Long 反序列化适配器（处理 API 返回 String/Number 混用的情况） =====
+class FlexibleLong : JsonDeserializer<Long?> {
+    override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Long? {
+        if (json == null || json.isJsonNull) return null
+        return try {
+            when {
+                json.isJsonPrimitive -> {
+                    val prim = json.asJsonPrimitive
+                    if (prim.isNumber) prim.asLong
+                    else if (prim.isString) prim.asString.toLongOrNull()
+                    else null
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+class FlexibleInt : JsonDeserializer<Int?> {
+    override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Int? {
+        if (json == null || json.isJsonNull) return null
+        return try {
+            when {
+                json.isJsonPrimitive -> {
+                    val prim = json.asJsonPrimitive
+                    if (prim.isNumber) prim.asInt
+                    else if (prim.isString) prim.asString.toIntOrNull()
+                    else null
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
 
 // ===== Token Plan 剩余用量 =====
 
@@ -15,69 +59,61 @@ data class MiniMaxBaseResp(
 )
 
 data class MiniMaxModelRemain(
+    @JsonAdapter(FlexibleLong::class)
     @SerializedName("start_time") val startTime: Long?,
+    @JsonAdapter(FlexibleLong::class)
     @SerializedName("end_time") val endTime: Long?,
+    @JsonAdapter(FlexibleLong::class)
     @SerializedName("remains_time") val remainsTime: Long?,
-    @SerializedName("current_interval_total_count") val currentIntervalTotalCount: Long?, // 剩余次数（不是总次数！）
-    @SerializedName("current_interval_usage_count") val currentIntervalUsageCount: Long?, // 已用次数
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("current_interval_total_count") val currentIntervalTotalCount: Long?,
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("current_interval_usage_count") val currentIntervalUsageCount: Long?,
     @SerializedName("model_name") val modelName: String?,
-    @SerializedName("current_weekly_total_count") val currentWeeklyTotalCount: Long?, // 剩余次数
-    @SerializedName("current_weekly_usage_count") val currentWeeklyUsageCount: Long?, // 已用次数
+    // Weekly fields (optional, may not exist)
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("current_weekly_total_count") val currentWeeklyTotalCount: Long?,
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("current_weekly_usage_count") val currentWeeklyUsageCount: Long?,
+    @JsonAdapter(FlexibleLong::class)
     @SerializedName("weekly_start_time") val weeklyStartTime: Long?,
+    @JsonAdapter(FlexibleLong::class)
     @SerializedName("weekly_end_time") val weeklyEndTime: Long?,
+    @JsonAdapter(FlexibleLong::class)
     @SerializedName("weekly_remains_time") val weeklyRemainsTime: Long?,
+    @JsonAdapter(FlexibleInt::class)
     @SerializedName("current_interval_status") val currentIntervalStatus: Int?,
+    @JsonAdapter(FlexibleInt::class)
     @SerializedName("current_interval_remaining_percent") val currentIntervalRemainingPercent: Int?,
+    @JsonAdapter(FlexibleInt::class)
     @SerializedName("current_weekly_status") val currentWeeklyStatus: Int?,
+    @JsonAdapter(FlexibleInt::class)
     @SerializedName("current_weekly_remaining_percent") val currentWeeklyRemainingPercent: Int?
-)
-
-// ===== Token Plan 用量详情 =====
-
-data class MiniMaxTokenPlanUsageResponse(
-    @SerializedName("model_usage") val modelUsage: List<MiniMaxModelUsage>?,
-    @SerializedName("base_resp") val baseResp: MiniMaxBaseResp?
-)
-
-data class MiniMaxModelUsage(
-    @SerializedName("model_name") val modelName: String?,
-    @SerializedName("daily_usage") val dailyUsage: List<MiniMaxDailyUsage>?
-)
-
-data class MiniMaxDailyUsage(
-    @SerializedName("date") val date: String?, // YYYY-MM-DD
-    @SerializedName("usage_count") val usageCount: Long?, // 调用次数
-    @SerializedName("token_count") val tokenCount: Long? // Token 数量
 )
 
 // ===== 聚合展示数据 =====
 
 data class MiniMaxPlanOverview(
-    val planType: String = "", // plus, max, ultra
-    val status: String = "", // active, expired
-    val expireTime: String = "", // ISO 8601
+    val planType: String = "",
+    val status: String = "",
+    val expireTime: String = "",
     val hourUsed: Long = 0,
     val hourLimit: Long = 0,
     val hourRemaining: Long = 0,
     val hourRemainingPercent: Int = 0,
-    val hourStatus: Int = 0, // 1=正常, 2=已用完
+    val hourStatus: Int = 0,
     val weekUsed: Long = 0,
     val weekLimit: Long = 0,
     val weekRemaining: Long = 0,
     val weekRemainingPercent: Int = 0,
-    val weekStatus: Int = 0, // 1=正常, 2=已用完
-    val modelName: String = "", // 主要模型名称
-    val hourRemainingTime: Long = 0, // 剩余时间（毫秒）
-    val weekRemainingTime: Long = 0, // 剩余时间（毫秒）
-    // 用量趋势数据
-    val dailyTrend: List<MiniMaxDailyTrend> = emptyList(),
-    val todayUsage: Long = 0,
-    val week7Usage: Long = 0,
-    val week30Usage: Long = 0
+    val weekStatus: Int = 0,
+    val modelName: String = "",
+    val hourRemainingTime: Long = 0,
+    val weekRemainingTime: Long = 0
 )
 
 data class MiniMaxDailyTrend(
-    val date: String, // MM-dd
+    val date: String,
     val usageCount: Long,
     val tokenCount: Long
 )

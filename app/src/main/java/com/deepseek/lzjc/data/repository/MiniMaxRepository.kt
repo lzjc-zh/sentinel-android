@@ -6,14 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.deepseek.lzjc.data.minimax.MiniMaxApiClient
-import com.deepseek.lzjc.data.minimax.MiniMaxDailyTrend
 import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
-import com.deepseek.lzjc.data.minimax.MiniMaxDailyUsage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -108,11 +104,7 @@ class MiniMaxRepository @Inject constructor(
                             weekStatus = weekStatus,
                             modelName = model.modelName ?: "",
                             hourRemainingTime = model.remainsTime ?: 0,
-                            weekRemainingTime = model.weeklyRemainsTime ?: 0,
-                            dailyTrend = emptyList(),
-                            todayUsage = 0,
-                            week7Usage = 0,
-                            week30Usage = 0
+                            weekRemainingTime = model.weeklyRemainsTime ?: 0
                         )
                     )
                 },
