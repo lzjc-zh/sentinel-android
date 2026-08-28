@@ -460,14 +460,7 @@ fun AnalyticsScreen(
                             }
                         }
 
-                        // 30天趋势图
-                        if (state.minimaxDailyUsage.isNotEmpty()) {
-                            item(key = "minimax_trend") {
-                                MiniMaxDailyUsageTrendCard(dailyUsage = state.minimaxDailyUsage)
-                            }
-                        }
-
-                        if (state.minimaxPlan == null && state.minimaxDailyUsage.isEmpty()) {
+                        if (state.minimaxPlan == null) {
                             item(key = "minimax_no_data") {
                                 Box(
                                     modifier = Modifier
@@ -834,102 +827,3 @@ private fun MiniMaxStatCard(
 }
 
 private val MiniMaxPurple = Color(0xFF6C5CE7)
-
-@Composable
-private fun MiniMaxDailyUsageTrendCard(dailyUsage: List<com.deepseek.lzjc.data.minimax.MiniMaxDailyUsage>) {
-    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "30天用量趋势",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.appColors.textPrimary
-            )
-            Spacer(Modifier.height(16.dp))
-
-            val maxTokens = dailyUsage.maxOfOrNull { it.tokenCount ?: 0L } ?: 1L
-            val animatedProgress by animateFloatAsState(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-                label = "chart_anim"
-            )
-
-            // 柱状图
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                dailyUsage.takeLast(30).forEach { daily ->
-                    val tokens = daily.tokenCount ?: 0L
-                    val barHeight = if (maxTokens > 0) {
-                        (tokens.toFloat() / maxTokens) * animatedProgress
-                    } else 0f
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Bottom
-                    ) {
-                        // 值标签（只在有值时显示）
-                        if (tokens > 0) {
-                            Text(
-                                text = formatMiniMaxTokenCount(tokens),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 7.sp,
-                                color = MaterialTheme.appColors.textTertiary
-                            )
-                        }
-                        Spacer(Modifier.height(2.dp))
-                        // 柱子
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height((barHeight * 100).dp.coerceAtMost(100.dp))
-                                .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                                .background(MiniMaxPurple.copy(alpha = 0.7f))
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // X轴日期标签
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                val displayDays = dailyUsage.takeLast(30)
-                if (displayDays.isNotEmpty()) {
-                    Text(
-                        text = displayDays.firstOrNull()?.date ?: "",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 9.sp,
-                        color = MaterialTheme.appColors.textTertiary
-                    )
-                    if (displayDays.size > 1) {
-                        Text(
-                            text = displayDays.lastOrNull()?.date ?: "",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 9.sp,
-                            color = MaterialTheme.appColors.textTertiary
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // 模型用量汇总
-            val totalTokens = dailyUsage.sumOf { it.tokenCount ?: 0L }
-            Text(
-                text = "近30天总用量: ${formatMiniMaxTokenCount(totalTokens)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.appColors.textSecondary
-            )
-        }
-    }
-}

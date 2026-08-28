@@ -16,12 +16,4 @@ interface MiniMaxApi {
     suspend fun getTokenPlanRemains(
         @Header("Authorization") auth: String
     ): MiniMaxTokenPlanRemainsResponse
-
-    /**
-     * 查询 Token Plan 用量详情（每日趋势）
-     */
-    @GET("v1/api/openplatform/coding_plan/usage")
-    suspend fun getTokenPlanUsage(
-        @Header("Authorization") auth: String
-    ): MiniMaxTokenPlanUsageResponse
 }

@@ -32,19 +32,4 @@ class MiniMaxApiClient @Inject constructor(
         }
     }
 
-    suspend fun getTokenPlanUsage(): Result<MiniMaxTokenPlanUsageResponse> {
-        return try {
-            val response = miniMaxApi.getTokenPlanUsage("Bearer $apiKey")
-            Log.d("MiniMaxFlow", "Usage Response: baseResp=${response.baseResp}, modelUsage=${response.modelUsage?.size}")
-            if (response.baseResp?.statusCode == 0) {
-                Result.success(response)
-            } else {
-                Result.failure(Exception(response.baseResp?.statusMsg ?: "Unknown error"))
-            }
-        } catch (e: Exception) {
-            Log.e("MiniMaxFlow", "getTokenPlanUsage error", e)
-            Result.failure(e)
-        }
-    }
-
 }
