@@ -25,9 +25,9 @@ class ArkApiClient @Inject constructor(
         return VolcAuth.generateAuthHeaders(accessKeyId, secretAccessKey, action, body)
     }
 
-    suspend fun getPersonalPlan(): Result<PersonalPlanResult> {
+    suspend fun getPersonalPlan(plan: String = "AgentPlan"): Result<PersonalPlanResult> {
         return try {
-            val request = GetPersonalPlanRequest()
+            val request = GetPersonalPlanRequest(plan = plan)
             val body = gson.toJson(request)
             val headers = generateHeaders("GetPersonalPlan", body)
             val response = arkApi.getPersonalPlan(headers = headers, request = request)
@@ -43,9 +43,9 @@ class ArkApiClient @Inject constructor(
         }
     }
 
-    suspend fun getAFPUsage(): Result<AFPUsageResult> {
+    suspend fun getAFPUsage(plan: String = "AgentPlan"): Result<AFPUsageResult> {
         return try {
-            val request = GetAFPUsageRequest()
+            val request = GetAFPUsageRequest(plan = plan)
             val body = gson.toJson(request)
             val headers = generateHeaders("GetAFPUsage", body)
             val response = arkApi.getAFPUsage(headers = headers, request = request)

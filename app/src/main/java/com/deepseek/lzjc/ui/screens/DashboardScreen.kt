@@ -1023,6 +1023,13 @@ private fun ArkDashboardContent(
                     }
                 }
 
+                // Coding Plan card (separate plan)
+                state.arkCodingPlan?.let { cp ->
+                    item(key = "coding_plan") {
+                        ArkCodingPlanCard(plan = cp)
+                    }
+                }
+
                 // Today & Monthly usage
                 item(key = "usage") {
                     ArkUsageCard(
@@ -2098,6 +2105,99 @@ private fun MiniMaxTrendChart(dailyData: List<com.deepseek.lzjc.data.minimax.Min
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF4A6FFF).copy(alpha = 0.08f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Coding Plan 套餐",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFF4A6FFF)
+                    ) {
+                        Text(
+                            text = plan.planType,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (plan.status == "Running") Color(0xFF4CAF50) else Color(0xFFFF5722)
+                ) {
+                    Text(
+                        text = if (plan.status == "Running") "生效中" else plan.status,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            // 5h / 周 / 月 额度明细
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                ArkInfoItem("5小时", "${plan.afp5hUsed.toLong()}/${plan.afp5hQuota.toLong()}")
+                ArkInfoItem("本周", "${plan.afp1wUsed.toLong()}/${plan.afp1wQuota.toLong()}")
+                ArkInfoItem("本月", "${plan.afp1mUsed.toLong()}/${plan.afp1mQuota.toLong()}")
+            }
+            Spacer(Modifier.height(12.dp))
+
+            LinearProgressIndicator(
+                progress = { plan.usagePercentage },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = Color(0xFF4A6FFF),
+                trackColor = Color(0xFF4A6FFF).copy(alpha = 0.2f)
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "已用: ${plan.usedAFP.toLong()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.appColors.textSecondary
+                )
+                Text(
+                    text = "总计: ${plan.totalAFP.toLong()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.appColors.textSecondary
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "到期: ${plan.endTime.substringBefore("T")} | 自动续费: ${if (plan.autoRenew) "是" else "否"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.appColors.textTertiary
+            )
         }
     }
 }

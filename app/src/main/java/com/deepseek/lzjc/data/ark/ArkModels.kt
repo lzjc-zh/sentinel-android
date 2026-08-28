@@ -106,7 +106,8 @@ data class ArkPlanOverview(
     val afp1wQuota: Double = 0.0,
     val afp1wUsed: Double = 0.0,
     val afp1mQuota: Double = 0.0,
-    val afp1mUsed: Double = 0.0
+    val afp1mUsed: Double = 0.0,
+    val planSource: String = "AgentPlan"
 ) {
     val remainingAFP: Double get() = totalAFP - usedAFP
 }

@@ -59,18 +59,25 @@ class ArkRepository @Inject constructor(
 
     suspend fun getPlanOverview(): Result<ArkPlanOverview> {
         return try {
-            val planResult = arkApiClient.getPersonalPlan()
-            val afpResult = arkApiClient.getAFPUsage()
+            // 尝试同时拉取 Agent Plan 和 Coding Plan
+            val agentPlanResult = arkApiClient.getPersonalPlan("AgentPlan")
+            val agentAfpResult = arkApiClient.getAFPUsage("AgentPlan")
+            val codingPlanResult = arkApiClient.getPersonalPlan("CodingPlan")
+            val codingAfpResult = arkApiClient.getAFPUsage("CodingPlan")
 
-            if (planResult.isFailure) {
-                return Result.failure(planResult.exceptionOrNull()!!)
-            }
-            if (afpResult.isFailure) {
-                return Result.failure(afpResult.exceptionOrNull()!!)
+            // 优先用 AgentPlan 为主套餐
+            val plan = agentPlanResult.getOrNull() ?: codingPlanResult.getOrNull()
+            val afp = agentAfpResult.getOrNull() ?: codingAfpResult.getOrNull()
+
+            if (plan == null || afp == null) {
+                val err = agentPlanResult.exceptionOrNull()
+                    ?: agentAfpResult.exceptionOrNull()
+                    ?: codingPlanResult.exceptionOrNull()
+                    ?: codingAfpResult.exceptionOrNull()
+                return Result.failure(err ?: Exception("No plan data"))
             }
 
-            val plan = planResult.getOrNull()!!
-            val afp = afpResult.getOrNull()!!
+            val planSource = if (agentPlanResult.isSuccess) "AgentPlan" else "CodingPlan"
 
             val totalAFP = afp.afpMonthly.quota
             val usedAFP = afp.afpMonthly.used
@@ -90,11 +97,53 @@ class ArkRepository @Inject constructor(
                     afp1wQuota = afp.afpWeekly.quota,
                     afp1wUsed = afp.afpWeekly.used,
                     afp1mQuota = afp.afpMonthly.quota,
-                    afp1mUsed = afp.afpMonthly.used
+                    afp1mUsed = afp.afpMonthly.used,
+                    planSource = planSource
                 )
             )
         } catch (e: Exception) {
             Log.e("ArkFlow", "getPlanOverview error", e)
+            Result.failure(e)
+        }
+    }
+
+    /** 获取 Coding Plan 的概览（仅 Coding Plan） */
+    suspend fun getCodingPlanOverview(): Result<ArkPlanOverview> {
+        return try {
+            val planResult = arkApiClient.getPersonalPlan("CodingPlan")
+            val afpResult = arkApiClient.getAFPUsage("CodingPlan")
+
+            val plan = planResult.getOrNull()
+            val afp = afpResult.getOrNull()
+
+            if (plan == null || afp == null) {
+                return Result.failure(planResult.exceptionOrNull() ?: afpResult.exceptionOrNull() ?: Exception("No coding plan data"))
+            }
+
+            val totalAFP = afp.afpMonthly.quota
+            val usedAFP = afp.afpMonthly.used
+            val usagePercentage = if (totalAFP > 0) (usedAFP / totalAFP).toFloat() else 0f
+
+            Result.success(
+                ArkPlanOverview(
+                    planType = plan.planType,
+                    status = plan.status,
+                    endTime = plan.endTime,
+                    autoRenew = plan.autoRenew,
+                    totalAFP = totalAFP,
+                    usedAFP = usedAFP,
+                    usagePercentage = usagePercentage,
+                    afp5hQuota = afp.afpFiveHour.quota,
+                    afp5hUsed = afp.afpFiveHour.used,
+                    afp1wQuota = afp.afpWeekly.quota,
+                    afp1wUsed = afp.afpWeekly.used,
+                    afp1mQuota = afp.afpMonthly.quota,
+                    afp1mUsed = afp.afpMonthly.used,
+                    planSource = "CodingPlan"
+                )
+            )
+        } catch (e: Exception) {
+            Log.e("ArkFlow", "getCodingPlanOverview error", e)
             Result.failure(e)
         }
     }

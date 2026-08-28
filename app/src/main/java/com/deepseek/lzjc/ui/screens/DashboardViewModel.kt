@@ -62,6 +62,7 @@ data class DashboardState(
     // Ark fields
     val arkHasCredentials: Boolean = false,
     val arkPlan: ArkPlanOverview? = null,
+    val arkCodingPlan: ArkPlanOverview? = null,
     val arkDailyData: List<DailyUsageSummary> = emptyList(),
     val arkModelCosts: List<ModelCostSummary> = emptyList(),
     val arkModelBreakdowns: List<DailyModelBreakdown> = emptyList(),
@@ -376,13 +377,18 @@ class DashboardViewModel @Inject constructor(
                 arkRepository.initCredentials()
 
                 val planResult = arkRepository.getPlanOverview()
+                val codingPlanResult = arkRepository.getCodingPlanOverview()
                 val usageResult = arkRepository.fetchRecentUsage(30)
 
                 var plan: ArkPlanOverview? = null
+                var codingPlan: ArkPlanOverview? = null
                 var errorMsg: String? = null
 
                 planResult.onSuccess { plan = it }
-                planResult.onFailure { e -> errorMsg = e.message }
+                planResult.onFailure { e -> if (errorMsg == null) errorMsg = e.message }
+
+                codingPlanResult.onSuccess { codingPlan = it }
+                // Coding Plan 失败不当作错误（用户可能没订阅）
 
                 usageResult.onFailure { e -> if (errorMsg == null) errorMsg = e.message }
 
@@ -398,6 +404,7 @@ class DashboardViewModel @Inject constructor(
                         isRefreshing = false,
                         errorMessage = errorMsg,
                         arkPlan = plan,
+                        arkCodingPlan = codingPlan,
                         arkDailyData = dailyData,
                         arkModelCosts = modelCosts,
                         arkModelBreakdowns = modelBreakdowns,
