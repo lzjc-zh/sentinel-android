@@ -68,6 +68,8 @@ data class AnalyticsState(
     val glmPlan: GlmPlanOverview? = null,
     // MiniMax fields
     val minimaxPlan: MiniMaxPlanOverview? = null,
+    val minimaxDailyTrend: List<com.deepseek.lzjc.data.db.DailyMaxUsed> = emptyList(),
+    val minimaxModelSummary: List<com.deepseek.lzjc.data.db.ModelUsageRow> = emptyList(),
     val errorMessage: String? = null
 )
 
@@ -334,11 +336,21 @@ class AnalyticsViewModel @Inject constructor(
                 val result = miniMaxRepository.getPlanOverview()
                 result.onSuccess { plan ->
                     hasLoaded = true
+                    // 加载历史趋势和模型汇总
+                    val fromDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).apply {
+                        val cal = java.util.Calendar.getInstance()
+                        cal.add(java.util.Calendar.DAY_OF_YEAR, -29)
+                    }.format(java.util.Date())
+                    val dailyTrend = miniMaxRepository.getDailyMaxUsed(fromDate, "hour")
+                    val modelSummary = miniMaxRepository.getModelUsageSummary(fromDate, "hour")
+
                     _state.update {
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            minimaxPlan = plan
+                            minimaxPlan = plan,
+                            minimaxDailyTrend = dailyTrend,
+                            minimaxModelSummary = modelSummary
                         )
                     }
                 }

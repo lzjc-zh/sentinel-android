@@ -5,11 +5,19 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.deepseek.lzjc.data.db.DailyMaxUsed
+import com.deepseek.lzjc.data.db.MiniMaxSnapshotDao
+import com.deepseek.lzjc.data.db.MiniMaxSnapshotEntity
+import com.deepseek.lzjc.data.db.ModelUsageRow
 import com.deepseek.lzjc.data.minimax.MiniMaxApiClient
+import com.deepseek.lzjc.data.minimax.MiniMaxModelRemain
 import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -17,10 +25,15 @@ import javax.inject.Singleton
 @Singleton
 class MiniMaxRepository @Inject constructor(
     private val miniMaxApiClient: MiniMaxApiClient,
-    @Named("minimax") private val dataStore: DataStore<Preferences>
+    @Named("minimax") private val dataStore: DataStore<Preferences>,
+    private val snapshotDao: MiniMaxSnapshotDao
 ) {
     companion object {
         val KEY_API_KEY = stringPreferencesKey("minimax_api_key")
+        private const val TAG = "MiniMaxFlow"
+        // MiniMax Plus 套餐官方额度
+        private const val HOUR_LIMIT = 1500L
+        private const val WEEK_LIMIT = 3000L
     }
 
     val apiKey: Flow<String> = dataStore.data.map { it[KEY_API_KEY] ?: "" }
@@ -42,49 +55,38 @@ class MiniMaxRepository @Inject constructor(
             remainsResult.fold(
                 onSuccess = { response ->
                     val modelRemains = response.modelRemains
-                    Log.d("MiniMaxFlow", "Model remains: $modelRemains")
+                    Log.d(TAG, "Model remains: $modelRemains")
 
                     if (modelRemains.isNullOrEmpty()) {
-                        Log.w("MiniMaxFlow", "No model remains data")
+                        Log.w(TAG, "No model remains data")
                         return Result.failure(Exception("No data returned"))
                     }
 
-                    // 获取 general 模型（主模型）的数据
+                    // 获取 general 模型（主模型）
                     val primaryModel = modelRemains.firstOrNull { it.modelName == "general" }
+                        ?: modelRemains.first()
 
-                    if (primaryModel == null) {
-                        Log.w("MiniMaxFlow", "No general model found, using first model")
-                    }
+                    Log.d(TAG, "Model: ${primaryModel.modelName}")
 
-                    val model = primaryModel ?: modelRemains.first()
+                    val remainingHourPct = primaryModel.currentIntervalRemainingPercent ?: 100
+                    val remainingWeekPct = primaryModel.currentWeeklyRemainingPercent ?: 100
 
-                    Log.d("MiniMaxFlow", "Model: ${model.modelName}")
-                    Log.d("MiniMaxFlow", "raw: currentIntervalTotalCount=${model.currentIntervalTotalCount}, currentIntervalUsageCount=${model.currentIntervalUsageCount}, remainingPercent=${model.currentIntervalRemainingPercent}")
-                    Log.d("MiniMaxFlow", "raw: currentWeeklyTotalCount=${model.currentWeeklyTotalCount}, currentWeeklyUsageCount=${model.currentWeeklyUsageCount}, weeklyRemainingPercent=${model.currentWeeklyRemainingPercent}")
+                    // 根据 remainingPercent 估算已用次数
+                    val hourUsed = if (remainingHourPct < 100) {
+                        ((100 - remainingHourPct) * HOUR_LIMIT / 100).toLong()
+                    } else 0L
 
-                    val usedHour = model.currentIntervalUsageCount ?: 0L
-                    val usedWeek = model.currentWeeklyUsageCount ?: 0L
-                    val remainingHourPct = model.currentIntervalRemainingPercent ?: 100
-                    val remainingWeekPct = model.currentWeeklyRemainingPercent ?: 100
-                    val hourStatus = model.currentIntervalStatus ?: 1
-                    val weekStatus = model.currentWeeklyStatus ?: 1
+                    val weekUsed = if (remainingWeekPct < 100) {
+                        ((100 - remainingWeekPct) * WEEK_LIMIT / 100).toLong()
+                    } else 0L
 
-                    // MiniMax Plus 套餐官方额度参考
-                    // 来自官方文档: Plus约12,000次/月, 5h约1500次, 周约3000次
-                    val hourLimit = 1500L
-                    val weekLimit = 3000L
+                    // 保存所有模型的快照
+                    val now = System.currentTimeMillis()
+                    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
-                    // 根据 remainingPercent 计算实际已用
-                    val hourUsedCalculated = if (remainingHourPct < 100) {
-                        ((100 - remainingHourPct) * hourLimit / 100).toLong()
-                    } else {
-                        hourLimit // 已用完
-                    }
-
-                    val weekUsedCalculated = if (remainingWeekPct < 100) {
-                        ((100 - remainingWeekPct) * weekLimit / 100).toLong()
-                    } else {
-                        weekLimit
+                    modelRemains.forEach { model ->
+                        saveSnapshot(model, "hour", today, now)
+                        saveSnapshot(model, "week", today, now)
                     }
 
                     Result.success(
@@ -92,30 +94,95 @@ class MiniMaxRepository @Inject constructor(
                             planType = "plus",
                             status = "active",
                             expireTime = "",
-                            hourUsed = hourUsedCalculated,
-                            hourLimit = hourLimit,
-                            hourRemaining = hourLimit - hourUsedCalculated,
+                            hourUsed = hourUsed,
+                            hourLimit = HOUR_LIMIT,
+                            hourRemaining = HOUR_LIMIT - hourUsed,
                             hourRemainingPercent = remainingHourPct,
-                            hourStatus = hourStatus,
-                            weekUsed = weekUsedCalculated,
-                            weekLimit = weekLimit,
-                            weekRemaining = weekLimit - weekUsedCalculated,
+                            hourStatus = primaryModel.currentIntervalStatus ?: 1,
+                            weekUsed = weekUsed,
+                            weekLimit = WEEK_LIMIT,
+                            weekRemaining = WEEK_LIMIT - weekUsed,
                             weekRemainingPercent = remainingWeekPct,
-                            weekStatus = weekStatus,
-                            modelName = model.modelName ?: "",
-                            hourRemainingTime = model.remainsTime ?: 0,
-                            weekRemainingTime = model.weeklyRemainsTime ?: 0
+                            weekStatus = primaryModel.currentWeeklyStatus ?: 1,
+                            modelName = primaryModel.modelName ?: "",
+                            hourRemainingTime = primaryModel.remainsTime ?: 0,
+                            weekRemainingTime = primaryModel.weeklyRemainsTime ?: 0
                         )
                     )
                 },
                 onFailure = { e ->
-                    Log.e("MiniMaxFlow", "API call failed", e)
+                    Log.e(TAG, "API call failed", e)
                     Result.failure(e)
                 }
             )
         } catch (e: Exception) {
-            Log.e("MiniMaxFlow", "getPlanOverview error", e)
+            Log.e(TAG, "getPlanOverview error", e)
             Result.failure(e)
+        }
+    }
+
+    private suspend fun saveSnapshot(
+        model: MiniMaxModelRemain,
+        window: String,
+        date: String,
+        timestamp: Long
+    ) {
+        try {
+            val usedCount = when (window) {
+                "hour" -> model.currentIntervalUsageCount ?: 0L
+                "week" -> model.currentWeeklyUsageCount ?: 0L
+                else -> 0L
+            }
+            val remainingPercent = when (window) {
+                "hour" -> model.currentIntervalRemainingPercent ?: 100
+                "week" -> model.currentWeeklyRemainingPercent ?: 100
+                else -> 100
+            }
+            val status = when (window) {
+                "hour" -> model.currentIntervalStatus ?: 1
+                "week" -> model.currentWeeklyStatus ?: 1
+                else -> 1
+            }
+            val limit = if (window == "hour") HOUR_LIMIT else WEEK_LIMIT
+            val remainingCount = if (remainingPercent < 100) {
+                (remainingPercent * limit / 100).toLong()
+            } else limit
+
+            snapshotDao.insert(
+                MiniMaxSnapshotEntity(
+                    timestamp = timestamp,
+                    date = date,
+                    modelName = model.modelName ?: "general",
+                    window = window,
+                    usedCount = usedCount,
+                    remainingCount = remainingCount,
+                    remainingPercent = remainingPercent,
+                    status = status,
+                    totalQuota = limit
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "saveSnapshot error", e)
+        }
+    }
+
+    /** 获取每日最大已用次数（用于折线图） */
+    suspend fun getDailyMaxUsed(fromDate: String, window: String = "hour"): List<DailyMaxUsed> {
+        return try {
+            snapshotDao.getDailyMaxUsed(fromDate, window)
+        } catch (e: Exception) {
+            Log.e(TAG, "getDailyMaxUsed error", e)
+            emptyList()
+        }
+    }
+
+    /** 获取模型用量汇总 */
+    suspend fun getModelUsageSummary(fromDate: String, window: String = "hour"): List<ModelUsageRow> {
+        return try {
+            snapshotDao.getModelUsageSummary(fromDate, window)
+        } catch (e: Exception) {
+            Log.e(TAG, "getModelUsageSummary error", e)
+            emptyList()
         }
     }
 }

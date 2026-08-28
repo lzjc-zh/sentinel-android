@@ -124,7 +124,13 @@ object AppModule {
             AppDatabase::class.java,
             "deepseek_balance.db"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5
+            )
+            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -132,6 +138,12 @@ object AppModule {
     @Singleton
     fun provideUsageDao(db: AppDatabase): UsageDao {
         return db.usageDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMiniMaxSnapshotDao(db: AppDatabase): com.deepseek.lzjc.data.db.MiniMaxSnapshotDao {
+        return db.miniMaxSnapshotDao()
     }
 
     @Provides

@@ -31,7 +31,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,8 +52,10 @@ import com.deepseek.lzjc.ui.components.TrendLineChart
 import com.deepseek.lzjc.ui.theme.appColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import com.deepseek.lzjc.data.db.DailyUsageSummary
 
@@ -460,6 +461,20 @@ fun AnalyticsScreen(
                             }
                         }
 
+                        // 30天用量趋势折线图
+                        if (state.minimaxDailyTrend.isNotEmpty()) {
+                            item(key = "minimax_trend") {
+                                MiniMaxTrendCard(dailyData = state.minimaxDailyTrend)
+                            }
+                        }
+
+                        // 模型用量详情
+                        if (state.minimaxModelSummary.isNotEmpty()) {
+                            item(key = "minimax_models") {
+                                MiniMaxModelSummaryCard(modelData = state.minimaxModelSummary)
+                            }
+                        }
+
                         if (state.minimaxPlan == null) {
                             item(key = "minimax_no_data") {
                                 Box(
@@ -804,3 +819,232 @@ private fun MiniMaxStatCard(
 }
 
 private val MiniMaxPurple = Color(0xFF6C5CE7)
+
+@Composable
+private fun MiniMaxTrendCard(dailyData: List<com.deepseek.lzjc.data.db.DailyMaxUsed>) {
+    val maxUsed = dailyData.maxOfOrNull { it.usedCount }?.toFloat() ?: 1f
+
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "30天用量趋势",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.appColors.textPrimary
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "数据来源：每次刷新时的已用次数记录",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.appColors.textTertiary
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 折线图
+            val pathColor = MiniMaxPurple
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                if (dailyData.isEmpty()) return@Canvas
+
+                val padding = 8.dp.toPx()
+                val width = size.width - padding * 2
+                val height = size.height - padding * 2
+
+                val xStep = if (dailyData.size > 1) width / (dailyData.size - 1) else 0f
+
+                // 网格线（3条）
+                val gridColor = Color(0xFFE0E0E0)
+                for (i in 0..3) {
+                    val y = padding + (height * i / 3)
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(padding, y),
+                        end = Offset(size.width - padding, y),
+                        strokeWidth = 1f
+                    )
+                }
+
+                // 数据点
+                val points = dailyData.mapIndexed { index, data ->
+                    val x = padding + xStep * index
+                    val y = padding + height - (data.usedCount.toFloat() / maxUsed) * height
+                    Offset(x, y)
+                }
+
+                // 折线
+                if (points.size >= 2) {
+                    val path = Path().apply {
+                        moveTo(points.first().x, points.first().y)
+                        for (i in 1 until points.size) {
+                            lineTo(points[i].x, points[i].y)
+                        }
+                    }
+                    // 渐变填充
+                    val fillPath = Path().apply {
+                        moveTo(points.first().x, size.height - padding)
+                        lineTo(points.first().x, points.first().y)
+                        for (i in 1 until points.size) {
+                            lineTo(points[i].x, points[i].y)
+                        }
+                        lineTo(points.last().x, size.height - padding)
+                        close()
+                    }
+                    drawPath(
+                        path = fillPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                pathColor.copy(alpha = 0.3f),
+                                pathColor.copy(alpha = 0.05f)
+                            ),
+                            startY = padding,
+                            endY = size.height - padding
+                        )
+                    )
+                    drawPath(
+                        path = path,
+                        color = pathColor,
+                        style = Stroke(width = 3f)
+                    )
+                }
+
+                // 数据点圆圈
+                points.forEach { point ->
+                    drawCircle(
+                        color = pathColor,
+                        radius = 3.dp.toPx(),
+                        center = point
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // X轴日期标签
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = dailyData.firstOrNull()?.date?.substring(5) ?: "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+                Text(
+                    text = "${dailyData.size} 天",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+                Text(
+                    text = dailyData.lastOrNull()?.date?.substring(5) ?: "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 汇总
+            val totalUsed = dailyData.sumOf { it.usedCount }
+            val avgUsed = if (dailyData.isNotEmpty()) totalUsed / dailyData.size else 0L
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "累计",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    Text(
+                        text = "$totalUsed",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MiniMaxPurple
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "日均",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    Text(
+                        text = "$avgUsed",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MiniMaxPurple
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "峰值",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    Text(
+                        text = "${maxUsed.toLong()}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MiniMaxPurple
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniMaxModelSummaryCard(modelData: List<com.deepseek.lzjc.data.db.ModelUsageRow>) {
+    val totalUsed = modelData.sumOf { it.maxUsed }.coerceAtLeast(1L)
+
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "模型用量详情",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.appColors.textPrimary
+            )
+            Spacer(Modifier.height(12.dp))
+
+            modelData.forEach { row ->
+                val percent = if (row.totalQuota > 0) {
+                    (row.maxUsed.toFloat() / row.totalQuota * 100).coerceAtMost(100f)
+                } else 0f
+
+                Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = row.modelName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.appColors.textPrimary
+                        )
+                        Text(
+                            text = "${row.maxUsed} / ${row.totalQuota} (${percent.toInt()}%)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.appColors.textSecondary
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { (percent / 100).toFloat() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = MiniMaxPurple,
+                        trackColor = MiniMaxPurple.copy(alpha = 0.15f)
+                    )
+                }
+            }
+        }
+    }
+}
