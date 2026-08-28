@@ -13,3 +13,8 @@
 }
 # 保留 API 数据模型
 -keep class com.deepseek.lzjc.data.api.** { *; }
+
+# MiniMax 数据模型和自定义反序列化器
+-keep class com.deepseek.lzjc.data.minimax.** { *; }
+-keep class com.deepseek.lzjc.data.minimax.FlexibleLong { *; }
+-keep class com.deepseek.lzjc.data.minimax.FlexibleInt { *; }
