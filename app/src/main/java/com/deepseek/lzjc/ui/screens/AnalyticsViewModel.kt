@@ -8,6 +8,7 @@ import com.deepseek.lzjc.data.db.DailyUsageSummary
 import com.deepseek.lzjc.data.db.ModelCostSummary
 import com.deepseek.lzjc.data.glm.GlmPlanOverview
 import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
+import com.deepseek.lzjc.data.minimax.MiniMaxDailyUsage
 import com.deepseek.lzjc.data.repository.ArkRepository
 import com.deepseek.lzjc.data.repository.GlmRepository
 import com.deepseek.lzjc.data.repository.MiMoRepository
@@ -68,6 +69,7 @@ data class AnalyticsState(
     val glmPlan: GlmPlanOverview? = null,
     // MiniMax fields
     val minimaxPlan: MiniMaxPlanOverview? = null,
+    val minimaxDailyUsage: List<MiniMaxDailyUsage> = emptyList(),
     val errorMessage: String? = null
 )
 
@@ -331,25 +333,24 @@ class AnalyticsViewModel @Inject constructor(
             try {
                 miniMaxRepository.initApiKey()
 
-                val result = miniMaxRepository.getPlanOverview()
-                result.onSuccess { plan ->
-                    hasLoaded = true
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            minimaxPlan = plan
-                        )
-                    }
+                // Fetch plan overview
+                val planResult = miniMaxRepository.getPlanOverview()
+                planResult.onSuccess { plan ->
+                    _state.update { it.copy(minimaxPlan = plan) }
                 }
-                result.onFailure { e ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            errorMessage = e.message
-                        )
-                    }
+
+                // Fetch daily usage
+                val dailyResult = miniMaxRepository.getDailyUsage()
+                dailyResult.onSuccess { daily ->
+                    _state.update { it.copy(minimaxDailyUsage = daily) }
+                }
+
+                hasLoaded = true
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false
+                    )
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, isRefreshing = false) }

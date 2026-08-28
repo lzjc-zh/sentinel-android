@@ -1,5 +1,8 @@
 package com.deepseek.lzjc.ui.screens
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.FilterChip
@@ -341,6 +346,30 @@ fun AnalyticsScreen(
                             item(key = "ark_trend") {
                                 TrendLineChart(dailyData = state.arkTrendData)
                             }
+                        } else {
+                            // 显示空状态
+                            item(key = "ark_trend_empty") {
+                                GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "30天趋势",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                        Text(
+                                            text = "暂无趋势数据",
+                                            color = MaterialTheme.appColors.textTertiary,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Model token usage pie chart
@@ -380,14 +409,65 @@ fun AnalyticsScreen(
                         }
                     }
                     Platform.MINIMAX -> {
-                        // MiniMax Plan overview
+                        // MiniMax Plan detailed overview
                         state.minimaxPlan?.let { plan ->
-                            item(key = "minimax_overview") {
-                                MiniMaxAnalyticsCard(plan = plan)
+                            item(key = "minimax_detail") {
+                                MiniMaxAnalyticsDetailCard(plan = plan)
+                            }
+                            // 5h 额度详情
+                            item(key = "minimax_5h") {
+                                MiniMaxQuotaDetailCard(
+                                    title = "5小时额度详情",
+                                    used = plan.hourUsed,
+                                    limit = plan.hourLimit,
+                                    remainingPercent = plan.hourRemainingPercent,
+                                    status = plan.hourStatus,
+                                    remainingTimeMs = plan.hourRemainingTime
+                                )
+                            }
+                            // 每周额度详情
+                            item(key = "minimax_week") {
+                                MiniMaxQuotaDetailCard(
+                                    title = "每周额度详情",
+                                    used = plan.weekUsed,
+                                    limit = plan.weekLimit,
+                                    remainingPercent = plan.weekRemainingPercent,
+                                    status = plan.weekStatus,
+                                    remainingTimeMs = plan.weekRemainingTime
+                                )
+                            }
+                            // 套餐说明
+                            item(key = "minimax_note") {
+                                GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "套餐说明",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.appColors.textPrimary
+                                        )
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            text = "• 套餐等级: ${plan.planType.uppercase()}\n" +
+                                                    "• 5小时窗口: 约 ${plan.hourLimit} 次\n" +
+                                                    "• 每周窗口: 约 ${plan.weekLimit} 次\n" +
+                                                    "• 模型: ${plan.modelName}",
+                                            color = MaterialTheme.appColors.textSecondary,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
                             }
                         }
 
-                        if (state.minimaxPlan == null) {
+                        // 30天趋势图
+                        if (state.minimaxDailyUsage.isNotEmpty()) {
+                            item(key = "minimax_trend") {
+                                MiniMaxDailyUsageTrendCard(dailyUsage = state.minimaxDailyUsage)
+                            }
+                        }
+
+                        if (state.minimaxPlan == null && state.minimaxDailyUsage.isEmpty()) {
                             item(key = "minimax_no_data") {
                                 Box(
                                     modifier = Modifier
@@ -565,77 +645,291 @@ private fun formatArkTokens(tokens: Long): String {
     }
 }
 
+fun formatMiniMaxTokenCount(count: Long): String {
+    return when {
+        count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
+        count >= 1_000 -> String.format("%.1fK", count / 1_000.0)
+        else -> count.toString()
+    }
+}
+
 // ===== MiniMax Analytics Components =====
 
 @Composable
-private fun MiniMaxAnalyticsCard(plan: MiniMaxPlanOverview) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+private fun MiniMaxAnalyticsDetailCard(plan: MiniMaxPlanOverview) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(
-                text = "MiniMax Token Plan 用量",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                text = "MiniMax Token Plan 用量详情",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.appColors.textPrimary
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "套餐等级: ${plan.planType.uppercase()}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.appColors.textSecondary
-            )
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "套餐等级: ${plan.planType.uppercase()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.appColors.textSecondary
+                )
+                if (plan.modelName.isNotBlank()) {
+                    Text(
+                        text = "模型: ${plan.modelName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.appColors.textSecondary
+                    )
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
-            // 5小时额度
-            MiniMaxQuotaRow(
-                label = "5小时额度",
-                used = plan.hourUsed,
-                remaining = plan.hourRemaining,
-                limit = plan.hourLimit
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            // 每周额度
-            MiniMaxQuotaRow(
-                label = "每周额度",
-                used = plan.weekUsed,
-                remaining = plan.weekRemaining,
-                limit = plan.weekLimit
-            )
+            // 今日 / 近7天 / 近30天 统计卡片
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MiniMaxStatCard(
+                    modifier = Modifier.weight(1f),
+                    label = "今日",
+                    value = formatMiniMaxTokenCount(plan.todayUsage)
+                )
+                MiniMaxStatCard(
+                    modifier = Modifier.weight(1f),
+                    label = "近7天",
+                    value = formatMiniMaxTokenCount(plan.week7Usage)
+                )
+                MiniMaxStatCard(
+                    modifier = Modifier.weight(1f),
+                    label = "近30天",
+                    value = formatMiniMaxTokenCount(plan.week30Usage)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MiniMaxQuotaRow(
-    label: String,
+private fun MiniMaxQuotaDetailCard(
+    title: String,
     used: Long,
-    remaining: Long,
-    limit: Long
+    limit: Long,
+    remainingPercent: Int,
+    status: Int,
+    remainingTimeMs: Long
 ) {
-    val percentage = if (limit > 0) (used.toDouble() / limit) else 0.0
+    val usedPercent = if (limit > 0) (used.toDouble() / limit) else 0.0
+    val isExhausted = status == 2
 
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                "剩余 $remaining",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.appColors.textSecondary
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            // 标题 + 状态标签
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.appColors.textPrimary
+                )
+                if (isExhausted) {
+                    Text(
+                        text = "已用完",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFF6B6B),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    Text(
+                        text = "剩余 $remainingPercent%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MiniMaxPurple,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 进度条
+            LinearProgressIndicator(
+                progress = { usedPercent.coerceIn(0.0, 1.0).toFloat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = if (isExhausted) Color(0xFFFF6B6B) else MiniMaxPurple,
+                trackColor = (if (isExhausted) Color(0xFFFF6B6B) else MiniMaxPurple).copy(alpha = 0.15f)
             )
+
+            Spacer(Modifier.height(8.dp))
+
+            // 已用 / 额度
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "已用: ${formatMiniMaxTokenCount(used)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.appColors.textSecondary
+                )
+                Text(
+                    text = "额度: ${formatMiniMaxTokenCount(limit)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.appColors.textSecondary
+                )
+            }
+
+            // 重置时间
+            if (remainingTimeMs > 0) {
+                Spacer(Modifier.height(6.dp))
+                val hours = remainingTimeMs / 3_600_000
+                val minutes = (remainingTimeMs % 3_600_000) / 60_000
+                Text(
+                    text = "重置时间: ${hours}小时${minutes}分钟后",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appColors.textTertiary
+                )
+            }
         }
-        Spacer(Modifier.height(4.dp))
-        LinearProgressIndicator(
-            progress = { percentage.coerceIn(0.0, 1.0).toFloat() },
+    }
+}
+
+@Composable
+private fun MiniMaxStatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String
+) {
+    Card(
+        modifier = modifier,
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MiniMaxPurple.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp),
-            color = MiniMaxPurple,
-            trackColor = MiniMaxPurple.copy(alpha = 0.2f)
-        )
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.appColors.textSecondary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MiniMaxPurple
+            )
+        }
     }
 }
 
 private val MiniMaxPurple = Color(0xFF6C5CE7)
+
+@Composable
+private fun MiniMaxDailyUsageTrendCard(dailyUsage: List<com.deepseek.lzjc.data.minimax.MiniMaxDailyUsage>) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "30天用量趋势",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.appColors.textPrimary
+            )
+            Spacer(Modifier.height(16.dp))
+
+            val maxTokens = dailyUsage.maxOfOrNull { it.tokenCount ?: 0L } ?: 1L
+            val animatedProgress by animateFloatAsState(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                label = "chart_anim"
+            )
+
+            // 柱状图
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                dailyUsage.takeLast(30).forEach { daily ->
+                    val tokens = daily.tokenCount ?: 0L
+                    val barHeight = if (maxTokens > 0) {
+                        (tokens.toFloat() / maxTokens) * animatedProgress
+                    } else 0f
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        // 值标签（只在有值时显示）
+                        if (tokens > 0) {
+                            Text(
+                                text = formatMiniMaxTokenCount(tokens),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 7.sp,
+                                color = MaterialTheme.appColors.textTertiary
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        // 柱子
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height((barHeight * 100).dp.coerceAtMost(100.dp))
+                                .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                .background(MiniMaxPurple.copy(alpha = 0.7f))
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // X轴日期标签
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                val displayDays = dailyUsage.takeLast(30)
+                if (displayDays.isNotEmpty()) {
+                    Text(
+                        text = displayDays.firstOrNull()?.date ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    if (displayDays.size > 1) {
+                        Text(
+                            text = displayDays.lastOrNull()?.date ?: "",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
+                            color = MaterialTheme.appColors.textTertiary
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 模型用量汇总
+            val totalTokens = dailyUsage.sumOf { it.tokenCount ?: 0L }
+            Text(
+                text = "近30天总用量: ${formatMiniMaxTokenCount(totalTokens)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.appColors.textSecondary
+            )
+        }
+    }
+}

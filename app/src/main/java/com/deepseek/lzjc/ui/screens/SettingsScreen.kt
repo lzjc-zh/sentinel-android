@@ -41,6 +41,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -277,7 +279,11 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Platform.entries.forEach { platform ->
                     FilterChip(
                         selected = viewModel.currentPlatform == platform,
@@ -289,8 +295,18 @@ fun SettingsScreen(
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = if (platform == Platform.MIMO) MiMoOrange.copy(alpha = 0.15f) else accent.copy(alpha = 0.15f),
-                            selectedLabelColor = if (platform == Platform.MIMO) MiMoOrange else accent
+                            selectedContainerColor = when (platform) {
+                                Platform.MIMO -> MiMoOrange.copy(alpha = 0.15f)
+                                Platform.GLM -> Color(0xFF134CFF).copy(alpha = 0.15f)
+                                Platform.MINIMAX -> Color(0xFF6C5CE7).copy(alpha = 0.15f)
+                                else -> accent.copy(alpha = 0.15f)
+                            },
+                            selectedLabelColor = when (platform) {
+                                Platform.MIMO -> MiMoOrange
+                                Platform.GLM -> Color(0xFF134CFF)
+                                Platform.MINIMAX -> Color(0xFF6C5CE7)
+                                else -> accent
+                            }
                         )
                     )
                 }

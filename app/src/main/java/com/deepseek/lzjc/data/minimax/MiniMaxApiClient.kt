@@ -20,14 +20,31 @@ class MiniMaxApiClient @Inject constructor(
     suspend fun getTokenPlanRemains(): Result<MiniMaxTokenPlanRemainsResponse> {
         return try {
             val response = miniMaxApi.getTokenPlanRemains("Bearer $apiKey")
-            if (response.code == null || response.code == 200) {
+            Log.d("MiniMaxFlow", "API Response: baseResp=${response.baseResp}, modelRemains=${response.modelRemains}")
+            if (response.baseResp?.statusCode == 0) {
                 Result.success(response)
             } else {
-                Result.failure(Exception(response.message ?: "Unknown error"))
+                Result.failure(Exception(response.baseResp?.statusMsg ?: "Unknown error"))
             }
         } catch (e: Exception) {
             Log.e("MiniMaxFlow", "getTokenPlanRemains error", e)
             Result.failure(e)
         }
     }
+
+    suspend fun getTokenPlanUsage(): Result<MiniMaxTokenPlanUsageResponse> {
+        return try {
+            val response = miniMaxApi.getTokenPlanUsage("Bearer $apiKey")
+            Log.d("MiniMaxFlow", "Usage Response: baseResp=${response.baseResp}, modelUsage=${response.modelUsage?.size}")
+            if (response.baseResp?.statusCode == 0) {
+                Result.success(response)
+            } else {
+                Result.failure(Exception(response.baseResp?.statusMsg ?: "Unknown error"))
+            }
+        } catch (e: Exception) {
+            Log.e("MiniMaxFlow", "getTokenPlanUsage error", e)
+            Result.failure(e)
+        }
+    }
+
 }

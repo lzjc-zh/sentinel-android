@@ -107,44 +107,47 @@ class ArkRepository @Inject constructor(
             val startDate = dateFormat.format(cal.time)
 
             val result = arkApiClient.getUsageDetails(startDate, endDate, "Day")
-            if (result.isFailure) {
-                return Result.failure(result.exceptionOrNull()!!)
-            }
+            
+            // 即使 API 失败也继续，只是不更新数据库
+            if (result.isSuccess) {
+                val details = result.getOrNull()?.details ?: emptyList()
+                val grouped = details.groupBy { detail ->
+                    val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(detail.time))
+                    Pair(date, detail.objectName)
+                }
 
-            val details = result.getOrNull()?.details ?: emptyList()
-            val grouped = details.groupBy { detail ->
-                val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(detail.time))
-                Pair(date, detail.objectName)
-            }
+                grouped.forEach { (key, items) ->
+                    val (date, model) = key
+                    val totalTokens = items.sumOf { it.usage }
+                    val month = date.substring(0, 7)
 
-            grouped.forEach { (key, items) ->
-                val (date, model) = key
-                val totalTokens = items.sumOf { it.usage }
-                val month = date.substring(0, 7)
-
-                usageDao.deleteByDateAndModelAndPlatform(date, model, "ark")
-                usageDao.insert(
-                    UsageEntity(
-                        timestamp = System.currentTimeMillis(),
-                        date = date,
-                        month = month,
-                        model = model,
-                        inputTokens = 0,
-                        outputTokens = totalTokens, // 存到 outputTokens 用于显示
-                        totalTokens = totalTokens,
-                        costAmount = 0.0,
-                        cacheHitTokens = 0,
-                        cacheMissTokens = 0,
-                        requestCount = items.size.toLong(), // 请求数量
-                        platform = "ark"
+                    usageDao.deleteByDateAndModelAndPlatform(date, model, "ark")
+                    usageDao.insert(
+                        UsageEntity(
+                            timestamp = System.currentTimeMillis(),
+                            date = date,
+                            month = month,
+                            model = model,
+                            inputTokens = 0,
+                            outputTokens = totalTokens,
+                            totalTokens = totalTokens,
+                            costAmount = 0.0,
+                            cacheHitTokens = 0,
+                            cacheMissTokens = 0,
+                            requestCount = items.size.toLong(),
+                            platform = "ark"
+                        )
                     )
-                )
+                }
+            } else {
+                Log.w("ArkFlow", "fetchRecentUsage failed, but continuing: ${result.exceptionOrNull()?.message}")
             }
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("ArkFlow", "fetchRecentUsage error", e)
-            Result.failure(e)
+            // 即使出错也返回成功，只是没有历史数据
+            Result.success(Unit)
         }
     }
 

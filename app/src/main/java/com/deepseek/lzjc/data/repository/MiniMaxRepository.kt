@@ -6,10 +6,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.deepseek.lzjc.data.minimax.MiniMaxApiClient
+import com.deepseek.lzjc.data.minimax.MiniMaxDailyTrend
 import com.deepseek.lzjc.data.minimax.MiniMaxPlanOverview
+import com.deepseek.lzjc.data.minimax.MiniMaxDailyUsage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -32,42 +36,139 @@ class MiniMaxRepository @Inject constructor(
 
     suspend fun initApiKey() {
         val key = dataStore.data.first()[KEY_API_KEY] ?: ""
-        if (key.isNotBlank()) {
-            miniMaxApiClient.setApiKey(key)
-        }
+        miniMaxApiClient.setApiKey(key)
     }
 
     suspend fun getPlanOverview(): Result<MiniMaxPlanOverview> {
         return try {
-            val result = miniMaxApiClient.getTokenPlanRemains()
-            result.fold(
+            val remainsResult = miniMaxApiClient.getTokenPlanRemains()
+
+            remainsResult.fold(
                 onSuccess = { response ->
-                    val data = response.data
-                    if (data == null) {
+                    val modelRemains = response.modelRemains
+                    Log.d("MiniMaxFlow", "Model remains: $modelRemains")
+
+                    if (modelRemains.isNullOrEmpty()) {
+                        Log.w("MiniMaxFlow", "No model remains data")
                         return Result.failure(Exception("No data returned"))
                     }
 
-                    val subscription = data.subscription
-                    val usage = data.usage
+                    // 获取 general 模型（主模型）的数据
+                    val primaryModel = modelRemains.firstOrNull { it.modelName == "general" }
+
+                    if (primaryModel == null) {
+                        Log.w("MiniMaxFlow", "No general model found, using first model")
+                    }
+
+                    val model = primaryModel ?: modelRemains.first()
+
+                    Log.d("MiniMaxFlow", "Model: ${model.modelName}")
+                    Log.d("MiniMaxFlow", "raw: currentIntervalTotalCount=${model.currentIntervalTotalCount}, currentIntervalUsageCount=${model.currentIntervalUsageCount}, remainingPercent=${model.currentIntervalRemainingPercent}")
+                    Log.d("MiniMaxFlow", "raw: currentWeeklyTotalCount=${model.currentWeeklyTotalCount}, currentWeeklyUsageCount=${model.currentWeeklyUsageCount}, weeklyRemainingPercent=${model.currentWeeklyRemainingPercent}")
+
+                    val usedHour = model.currentIntervalUsageCount ?: 0L
+                    val usedWeek = model.currentWeeklyUsageCount ?: 0L
+                    val remainingHourPct = model.currentIntervalRemainingPercent ?: 100
+                    val remainingWeekPct = model.currentWeeklyRemainingPercent ?: 100
+                    val hourStatus = model.currentIntervalStatus ?: 1
+                    val weekStatus = model.currentWeeklyStatus ?: 1
+
+                    // MiniMax Plus 套餐官方额度参考
+                    // 来自官方文档: Plus约12,000次/月, 5h约1500次, 周约3000次
+                    val hourLimit = 1500L
+                    val weekLimit = 3000L
+
+                    // 根据 remainingPercent 计算实际已用
+                    val hourUsedCalculated = if (remainingHourPct < 100) {
+                        ((100 - remainingHourPct) * hourLimit / 100).toLong()
+                    } else {
+                        hourLimit // 已用完
+                    }
+
+                    val weekUsedCalculated = if (remainingWeekPct < 100) {
+                        ((100 - remainingWeekPct) * weekLimit / 100).toLong()
+                    } else {
+                        weekLimit
+                    }
 
                     Result.success(
                         MiniMaxPlanOverview(
-                            planType = subscription?.planType ?: "",
-                            status = subscription?.status ?: "",
-                            expireTime = subscription?.expireTime ?: "",
-                            hourUsed = usage?.currentHour?.used ?: 0,
-                            hourLimit = usage?.currentHour?.limit ?: 0,
-                            hourRemaining = usage?.currentHour?.remaining ?: 0,
-                            weekUsed = usage?.currentWeek?.used ?: 0,
-                            weekLimit = usage?.currentWeek?.limit ?: 0,
-                            weekRemaining = usage?.currentWeek?.remaining ?: 0
+                            planType = "plus",
+                            status = "active",
+                            expireTime = "",
+                            hourUsed = hourUsedCalculated,
+                            hourLimit = hourLimit,
+                            hourRemaining = hourLimit - hourUsedCalculated,
+                            hourRemainingPercent = remainingHourPct,
+                            hourStatus = hourStatus,
+                            weekUsed = weekUsedCalculated,
+                            weekLimit = weekLimit,
+                            weekRemaining = weekLimit - weekUsedCalculated,
+                            weekRemainingPercent = remainingWeekPct,
+                            weekStatus = weekStatus,
+                            modelName = model.modelName ?: "",
+                            hourRemainingTime = model.remainsTime ?: 0,
+                            weekRemainingTime = model.weeklyRemainsTime ?: 0,
+                            dailyTrend = emptyList(),
+                            todayUsage = 0,
+                            week7Usage = 0,
+                            week30Usage = 0
                         )
                     )
                 },
-                onFailure = { e -> Result.failure(e) }
+                onFailure = { e ->
+                    Log.e("MiniMaxFlow", "API call failed", e)
+                    Result.failure(e)
+                }
             )
         } catch (e: Exception) {
             Log.e("MiniMaxFlow", "getPlanOverview error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getDailyUsage(): Result<List<MiniMaxDailyUsage>> {
+        return try {
+            val usageResult = miniMaxApiClient.getTokenPlanUsage()
+            usageResult.fold(
+                onSuccess = { response ->
+                    val modelUsage = response.modelUsage
+                    if (modelUsage.isNullOrEmpty()) {
+                        return Result.success(emptyList())
+                    }
+
+                    // 聚合所有模型的每日用量
+                    val dailyMap = mutableMapOf<String, Long>()
+                    modelUsage.forEach { model ->
+                        model.dailyUsage?.forEach { daily ->
+                            val date = daily.date ?: return@forEach
+                            val tokenCount = daily.tokenCount ?: 0L
+                            dailyMap[date] = (dailyMap[date] ?: 0L) + tokenCount
+                        }
+                    }
+
+                    val formatter = DateTimeFormatter.ofPattern("MM-dd")
+                    val dailyList = dailyMap.map { (date, tokens) ->
+                        MiniMaxDailyUsage(
+                            date = try {
+                                LocalDate.parse(date).format(formatter)
+                            } catch (e: Exception) {
+                                date
+                            },
+                            usageCount = 0,
+                            tokenCount = tokens
+                        )
+                    }.sortedBy { it.date }
+
+                    Result.success(dailyList)
+                },
+                onFailure = { e ->
+                    Log.e("MiniMaxFlow", "getDailyUsage failed", e)
+                    Result.failure(e)
+                }
+            )
+        } catch (e: Exception) {
+            Log.e("MiniMaxFlow", "getDailyUsage error", e)
             Result.failure(e)
         }
     }

@@ -1863,37 +1863,83 @@ private fun MiniMaxDashboardContent(
 private fun MiniMaxPlanCard(plan: MiniMaxPlanOverview) {
     GlassPanel(modifier = Modifier.fillMaxWidth(), radius = 24) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Text(
-                text = "MiniMax Token Plan",
-                color = MaterialTheme.appColors.textPrimary,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "套餐等级: ${plan.planType.uppercase()}",
-                color = MaterialTheme.appColors.textSecondary,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            // 标题行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "MiniMax Token Plan",
+                    color = MaterialTheme.appColors.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MiniMaxPurple.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = plan.planType.uppercase(),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        color = MiniMaxPurple,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
-            // 5小时额度
+            // 5小时额度 - 进度条
             MiniMaxUsageRow(
                 label = "5小时额度",
                 used = plan.hourUsed,
                 remaining = plan.hourRemaining,
-                limit = plan.hourLimit
+                limit = plan.hourLimit,
+                remainingPercent = plan.hourRemainingPercent,
+                status = plan.hourStatus,
+                remainingTimeMs = plan.hourRemainingTime
             )
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // 每周额度
+            // 每周额度 - 进度条
             MiniMaxUsageRow(
                 label = "每周额度",
                 used = plan.weekUsed,
                 remaining = plan.weekRemaining,
-                limit = plan.weekLimit
+                limit = plan.weekLimit,
+                remainingPercent = plan.weekRemainingPercent,
+                status = plan.weekStatus,
+                remainingTimeMs = plan.weekRemainingTime
             )
+
+            Spacer(Modifier.height(20.dp))
+
+            // 统计数据卡片
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 今日
+                MiniMaxStatCard(
+                    modifier = Modifier.weight(1f),
+                    label = "今日",
+                    value = formatTokenCount(plan.todayUsage)
+                )
+                // 近7天
+                MiniMaxStatCard(
+                    modifier = Modifier.weight(1f),
+                    label = "近7天",
+                    value = formatTokenCount(plan.week7Usage)
+                )
+                // 近30天
+                MiniMaxStatCard(
+                    modifier = Modifier.weight(1f),
+                    label = "近30天",
+                    value = formatTokenCount(plan.week30Usage)
+                )
+            }
         }
     }
 }
@@ -1903,9 +1949,12 @@ private fun MiniMaxUsageRow(
     label: String,
     used: Long,
     remaining: Long,
-    limit: Long
+    limit: Long,
+    remainingPercent: Int = 0,
+    status: Int = 0,
+    remainingTimeMs: Long = 0
 ) {
-    val percentage = if (limit > 0) (used.toDouble() / limit) else 0.0
+    val usagePercent = if (limit > 0) (used.toDouble() / limit * 100).toInt() else 0
 
     Column {
         Row(
@@ -1920,19 +1969,160 @@ private fun MiniMaxUsageRow(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = "剩余 $remaining",
+                text = "已使用 $usagePercent%",
                 color = MaterialTheme.appColors.textSecondary,
                 style = MaterialTheme.typography.bodySmall
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
         LinearProgressIndicator(
-            progress = { percentage.coerceIn(0.0, 1.0).toFloat() },
+            progress = { usagePercent.coerceIn(0, 100) / 100f },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(6.dp),
-            color = MiniMaxPurple,
+                .height(8.dp),
+            color = if (usagePercent >= 90) Color(0xFFE53935) else MiniMaxPurple,
             trackColor = MiniMaxPurple.copy(alpha = 0.2f)
         )
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "已用: ${formatTokenCount(used)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.appColors.textSecondary
+            )
+            Text(
+                "额度: ${formatTokenCount(limit)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.appColors.textSecondary
+            )
+        }
+        if (remainingTimeMs > 0) {
+            val hours = remainingTimeMs / 3600000
+            val minutes = (remainingTimeMs % 3600000) / 60000
+            Text(
+                text = "${hours}小时${minutes}分后重置",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.appColors.textTertiary
+            )
+        }
+    }
+}
+
+private fun formatTokenCount2(count: Long): String {
+    return when {
+        count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
+        count >= 1_000 -> String.format("%.1fK", count / 1_000.0)
+        else -> count.toString()
+    }
+}
+
+@Composable
+private fun MiniMaxStatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MiniMaxPurple.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.appColors.textSecondary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MiniMaxPurple
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiniMaxTrendChart(dailyData: List<com.deepseek.lzjc.data.minimax.MiniMaxDailyTrend>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (dailyData.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "暂无趋势数据",
+                        color = MaterialTheme.appColors.textTertiary,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else {
+                val maxTokens = dailyData.maxOfOrNull { it.tokenCount } ?: 1L
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                ) {
+                    val points = dailyData.mapIndexed { index, trend ->
+                        val x = (index.toFloat() / (dailyData.size - 1).coerceAtLeast(1)) * size.width
+                        val y = size.height - (trend.tokenCount.toFloat() / maxTokens) * size.height * 0.9f
+                        Offset(x, y)
+                    }
+
+                    // Draw line
+                    if (points.size >= 2) {
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(points[0].x, points[0].y)
+                            for (i in 1 until points.size) {
+                                lineTo(points[i].x, points[i].y)
+                            }
+                        }
+                        drawPath(
+                            path = path,
+                            color = MiniMaxPurple,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+                        )
+                    }
+
+                    // Draw points
+                    points.forEach { point ->
+                        drawCircle(
+                            color = MiniMaxPurple,
+                            radius = 4f,
+                            center = point
+                        )
+                    }
+                }
+
+                // Date labels
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    dailyData.forEach { trend ->
+                        Text(
+                            text = trend.date,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.appColors.textTertiary
+                        )
+                    }
+                }
+            }
+        }
     }
 }

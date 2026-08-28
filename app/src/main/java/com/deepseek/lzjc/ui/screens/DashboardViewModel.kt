@@ -94,6 +94,9 @@ class DashboardViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // 初始化所有仓库
+            miniMaxRepository.initApiKey()
+
             // Check credential availability
             val mimoLoggedIn = mimoRepository.isLoggedIn()
             val hasDeepSeekKey = repository.apiKey.first().isNotBlank()
@@ -420,14 +423,31 @@ class DashboardViewModel @Inject constructor(
             val hasGlmKey = glmRepository.apiKey.first().isNotBlank()
             val hasArkKey = arkRepository.accessKeyId.first().isNotBlank()
             val hasDeepSeekKey = repository.apiKey.first().isNotBlank()
+            val hasMiniMaxKey = miniMaxRepository.apiKey.first().isNotBlank()
             val mimoLoggedIn = mimoRepository.isLoggedIn()
             _state.update {
                 it.copy(
                     glmHasApiKey = hasGlmKey,
                     arkHasCredentials = hasArkKey,
                     hasApiKey = hasDeepSeekKey,
-                    mimoLoggedIn = mimoLoggedIn
+                    mimoLoggedIn = mimoLoggedIn,
+                    minimaxHasApiKey = hasMiniMaxKey
                 )
+            }
+            
+            // 如果当前平台有凭证，自动刷新
+            when (_state.value.currentPlatform) {
+                Platform.MINIMAX -> {
+                    if (hasMiniMaxKey && _state.value.minimaxPlan == null) {
+                        refreshMiniMax()
+                    }
+                }
+                Platform.GLM -> {
+                    if (hasGlmKey && _state.value.glmPlan == null) {
+                        refreshGlm()
+                    }
+                }
+                else -> {}
             }
         }
     }
