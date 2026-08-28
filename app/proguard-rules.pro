@@ -18,3 +18,7 @@
 -keep class com.deepseek.lzjc.data.minimax.** { *; }
 -keep class com.deepseek.lzjc.data.minimax.FlexibleLong { *; }
 -keep class com.deepseek.lzjc.data.minimax.FlexibleInt { *; }
+-keep class com.deepseek.lzjc.data.minimax.FlexibleDouble { *; }
+
+# 火山方舟数据模型
+-keep class com.deepseek.lzjc.data.ark.** { *; }

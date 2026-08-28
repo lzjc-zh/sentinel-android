@@ -7,7 +7,8 @@ import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
 import java.lang.reflect.Type
 
-// ===== 通用 Long 反序列化适配器（处理 API 返回 String/Number 混用的情况） =====
+// ===== 通用反序列化适配器（处理 API 返回 String/Number 混用的情况） =====
+
 class FlexibleLong : JsonDeserializer<Long?> {
     override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Long? {
         if (json == null || json.isJsonNull) return null
@@ -36,6 +37,25 @@ class FlexibleInt : JsonDeserializer<Int?> {
                     val prim = json.asJsonPrimitive
                     if (prim.isNumber) prim.asInt
                     else if (prim.isString) prim.asString.toIntOrNull()
+                    else null
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+class FlexibleDouble : JsonDeserializer<Double?> {
+    override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Double? {
+        if (json == null || json.isJsonNull) return null
+        return try {
+            when {
+                json.isJsonPrimitive -> {
+                    val prim = json.asJsonPrimitive
+                    if (prim.isNumber) prim.asDouble
+                    else if (prim.isString) prim.asString.toDoubleOrNull()
                     else null
                 }
                 else -> null

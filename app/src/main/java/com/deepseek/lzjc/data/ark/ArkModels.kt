@@ -1,5 +1,8 @@
 package com.deepseek.lzjc.data.ark
 
+import com.deepseek.lzjc.data.minimax.FlexibleDouble
+import com.deepseek.lzjc.data.minimax.FlexibleLong
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
 
 // ===== 通用响应包装 =====
@@ -64,10 +67,14 @@ data class AFPUsageResult(
 )
 
 data class AFPWindow(
-    @SerializedName("Quota") val quota: Double,
-    @SerializedName("Used") val used: Double,
-    @SerializedName("SubscribeTime") val subscribeTime: Long,
-    @SerializedName("ResetTime") val resetTime: Long
+    @JsonAdapter(FlexibleDouble::class)
+    @SerializedName("Quota") val quota: Double = 0.0,
+    @JsonAdapter(FlexibleDouble::class)
+    @SerializedName("Used") val used: Double = 0.0,
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("SubscribeTime") val subscribeTime: Long = 0L,
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("ResetTime") val resetTime: Long = 0L
 )
 
 data class UsageDetailsResult(
@@ -75,11 +82,13 @@ data class UsageDetailsResult(
 )
 
 data class UsageDetailItem(
-    @SerializedName("BillingType") val billingType: String,
-    @SerializedName("ObjectName") val objectName: String,
-    @SerializedName("Time") val time: Long,
-    @SerializedName("Unit") val unit: String,
-    @SerializedName("Usage") val usage: Long
+    @SerializedName("BillingType") val billingType: String = "",
+    @SerializedName("ObjectName") val objectName: String = "",
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("Time") val time: Long = 0L,
+    @SerializedName("Unit") val unit: String = "",
+    @JsonAdapter(FlexibleLong::class)
+    @SerializedName("Usage") val usage: Long = 0L
 )
 
 // ===== 聚合展示数据 =====
