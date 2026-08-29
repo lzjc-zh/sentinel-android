@@ -49,6 +49,21 @@ class ArkRepository @Inject constructor(
             "kimi-k2.6",
             "kimi-k2.7-code"
         )
+
+        // 解析 ISO 8601 时间字符串为毫秒（支持 "2026-08-28T13:37:23Z" 和 "2026-08-28T13:37:23+08:00"）
+        private fun parseIso8601Ms(iso: String): Long {
+            if (iso.isBlank()) return 0L
+            return try {
+                val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                val s = iso.substringBefore("+").substringBefore("Z").substringBeforeLast(".")
+                parser.parse(s)?.time ?: 0L
+            } catch (e: Exception) {
+                Log.e("ArkFlow", "parseIso8601Ms error: $iso", e)
+                0L
+            }
+        }
     }
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -139,11 +154,15 @@ class ArkRepository @Inject constructor(
             val plan = planResult.getOrNull()
                 ?: return Result.failure(planResult.exceptionOrNull() ?: Exception("No Coding Plan data"))
 
-            // 拉取近 30 天的 Coding Plan 用量明细
+            // 拉取从 Coding Plan 订阅开始到现在的全部明细（用于计算 5h/周/月窗口）
+            // 解析 StartTime（ISO 8601: 2026-08-28T13:37:23Z）
+            val startMs = parseIso8601Ms(plan.startTime)
+            val now = System.currentTimeMillis()
+
             val cal = Calendar.getInstance()
-            val endDate = dateFormat.format(cal.time)
-            cal.add(Calendar.DAY_OF_YEAR, -30)
+            cal.timeInMillis = startMs
             val startDate = dateFormat.format(cal.time)
+            val endDate = dateFormat.format(Date(now))
 
             val detailsResult = arkApiClient.getUsageDetails(
                 startDate = startDate,
@@ -154,27 +173,35 @@ class ArkRepository @Inject constructor(
 
             val details = detailsResult.getOrNull()?.details ?: emptyList()
 
-            // 按日期聚合
-            val dailyMap = details.groupBy { detail ->
-                val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(detail.time))
-                Pair(date, detail.objectName)
-            }
-
-            // 计算 5h / 周 / 月 请求次数（不是 token 数）
-            val now = System.currentTimeMillis()
+            // 5h 滑动窗口：当前时间往前 5 小时内的调用次数
             val fiveHoursAgo = now - 5L * 60 * 60 * 1000
-            val oneWeekAgo = now - 7L * 24 * 60 * 60 * 1000
-
             val last5hCount = details.count { it.time >= fiveHoursAgo }
-            val lastWeekCount = details.count { it.time >= oneWeekAgo }
-            val lastMonthCount = details.size
+
+            // 周限额：从本周一 00:00 算起（ISO 8601 周一开始）
+            val weekStart = Calendar.getInstance().apply {
+                firstDayOfWeek = Calendar.MONDAY
+                set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val lastWeekCount = details.count { it.time >= weekStart }
+
+            // 月限额：从本月 1 日 00:00 算起
+            val monthStart = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val lastMonthCount = details.count { it.time >= monthStart }
 
             // Coding Plan 套餐的请求次数配额（根据 planType 区分 Lite/Pro）
-            // Lite: 5h ~1200 次, 周 ~9000 次, 月 ~18000 次
-            // Pro: 5h ~6000 次, 周 ~45000 次, 月 ~90000 次
             val (hourQuota, weekQuota, monthQuota) = when (plan.planType.uppercase()) {
                 "PRO" -> Triple(6000.0, 45000.0, 90000.0)
-                else  -> Triple(1200.0, 9000.0, 18000.0)  // Lite 默认
+                else  -> Triple(1200.0, 9000.0, 18000.0)
             }
 
             val hourUsed = last5hCount.toDouble()
