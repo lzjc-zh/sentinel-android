@@ -2125,7 +2125,7 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Coding Plan Ã◊≤Õ",
+                        text = "Coding Plan Â•óÈ§ê",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -2147,7 +2147,7 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
                     color = if (plan.status == "Running") Color(0xFF4CAF50) else Color(0xFFFF5722)
                 ) {
                     Text(
-                        text = if (plan.status == "Running") "…˙–ß÷–" else plan.status,
+                        text = if (plan.status == "Running") "ÁîüÊïà‰∏≠" else plan.status,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         color = Color.White,
                         style = MaterialTheme.typography.labelSmall
@@ -2156,14 +2156,14 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
             }
             Spacer(Modifier.height(12.dp))
 
-            // 5h / ÷‹ / ‘¬ ∂Ó∂»√˜œ∏
+            // 5h / Âë® / Êúà È¢ùÂ∫¶ÊòéÁªÜ
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ArkInfoItem("5–° ±", "${plan.afp5hUsed.toLong()}/${plan.afp5hQuota.toLong()}")
-                ArkInfoItem("±æ÷‹", "${plan.afp1wUsed.toLong()}/${plan.afp1wQuota.toLong()}")
-                ArkInfoItem("±æ‘¬", "${plan.afp1mUsed.toLong()}/${plan.afp1mQuota.toLong()}")
+                ArkInfoItem("5Â∞èÊó∂", "${plan.afp5hUsed.toLong()}/${plan.afp5hQuota.toLong()}")
+                ArkInfoItem("Êú¨Âë®", "${plan.afp1wUsed.toLong()}/${plan.afp1wQuota.toLong()}")
+                ArkInfoItem("Êú¨Êúà", "${plan.afp1mUsed.toLong()}/${plan.afp1mQuota.toLong()}")
             }
             Spacer(Modifier.height(12.dp))
 
@@ -2182,19 +2182,19 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "“—”√: ${plan.usedAFP.toLong()}",
+                    text = "Â∑≤Áî®: ${plan.usedAFP.toLong()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.appColors.textSecondary
                 )
                 Text(
-                    text = "◊‹º∆: ${plan.totalAFP.toLong()}",
+                    text = "ÊÄªËÆ°: ${plan.totalAFP.toLong()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.appColors.textSecondary
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "µΩ∆⁄: ${plan.endTime.substringBefore("T")} | ◊‘∂Ø–¯∑—: ${if (plan.autoRenew) " «" else "∑Ò"}",
+                text = "Âà∞Êúü: ${plan.endTime.substringBefore("T")} | Ëá™Âä®Áª≠Ë¥π: ${if (plan.autoRenew) "ÊòØ" else "Âê¶"}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.appColors.textTertiary
             )
