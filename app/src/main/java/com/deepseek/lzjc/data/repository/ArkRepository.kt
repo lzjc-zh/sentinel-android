@@ -155,7 +155,6 @@ class ArkRepository @Inject constructor(
                 ?: return Result.failure(planResult.exceptionOrNull() ?: Exception("No Coding Plan data"))
 
             // 拉取从 Coding Plan 订阅开始到现在的全部明细（用于计算 5h/周/月窗口）
-            // 解析 StartTime（ISO 8601: 2026-08-28T13:37:23Z）
             val startMs = parseIso8601Ms(plan.startTime)
             val now = System.currentTimeMillis()
 

@@ -65,7 +65,8 @@ class ArkApiClient @Inject constructor(
         startDate: String,
         endDate: String,
         interval: String = "Day",
-        objectNames: List<String>? = null
+        objectNames: List<String>? = null,
+        planTypes: List<Int>? = null
     ): Result<UsageDetailsResult> {
         return try {
             val request = GetUsageDetailsRequest(
