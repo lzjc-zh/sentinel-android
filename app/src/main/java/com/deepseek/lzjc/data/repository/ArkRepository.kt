@@ -33,6 +33,22 @@ class ArkRepository @Inject constructor(
     companion object {
         val KEY_ACCESS_KEY_ID = stringPreferencesKey("ark_access_key_id")
         val KEY_SECRET_ACCESS_KEY = stringPreferencesKey("ark_secret_access_key")
+
+        // Coding Plan 专属模型（用来在 GetUsageDetails 中过滤）
+        private val CODING_PLAN_MODELS = listOf(
+            "minimax-m3",
+            "glm-5.3",
+            "glm-5.2",
+            "deepseek-v4-flash-ga-260731",
+            "deepseek-v4-pro-260425",
+            "doubao-embedding-vision-251215",
+            "doubao-seed-evolving",
+            "doubao-seed-2.0-lite",
+            "doubao-seed-code",
+            "doubao-seed-2.1-turbo",
+            "kimi-k2.6",
+            "kimi-k2.7-code"
+        )
     }
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -95,10 +111,13 @@ class ArkRepository @Inject constructor(
                     usagePercentage = usagePercentage,
                     afp5hQuota = afp.afpFiveHour.quota,
                     afp5hUsed = afp.afpFiveHour.used,
+                    afp5hPercent = if (afp.afpFiveHour.quota > 0) afp.afpFiveHour.used / afp.afpFiveHour.quota * 100 else 0.0,
                     afp1wQuota = afp.afpWeekly.quota,
                     afp1wUsed = afp.afpWeekly.used,
+                    afp1wPercent = if (afp.afpWeekly.quota > 0) afp.afpWeekly.used / afp.afpWeekly.quota * 100 else 0.0,
                     afp1mQuota = afp.afpMonthly.quota,
                     afp1mUsed = afp.afpMonthly.used,
+                    afp1mPercent = if (afp.afpMonthly.quota > 0) afp.afpMonthly.used / afp.afpMonthly.quota * 100 else 0.0,
                     planSource = planSource
                 )
             )
@@ -108,22 +127,64 @@ class ArkRepository @Inject constructor(
         }
     }
 
-    /** 获取 Coding Plan 的概览（仅 Coding Plan） */
+    /**
+     * 获取 Coding Plan 的概览
+     * Coding Plan 走另一套逻辑：
+     * 1. GetPersonalPlan("CodingPlan") 获取套餐基础信息
+     * 2. GetUsageDetails 过滤 Coding Plan 专属模型名，计算用量
+     */
     suspend fun getCodingPlanOverview(): Result<ArkPlanOverview> {
         return try {
             val planResult = arkApiClient.getPersonalPlan("CodingPlan")
-            val afpResult = arkApiClient.getAFPUsage("CodingPlan")
-
             val plan = planResult.getOrNull()
-            val afp = afpResult.getOrNull()
+                ?: return Result.failure(planResult.exceptionOrNull() ?: Exception("No Coding Plan data"))
 
-            if (plan == null || afp == null) {
-                return Result.failure(planResult.exceptionOrNull() ?: afpResult.exceptionOrNull() ?: Exception("No coding plan data"))
+            // 拉取近 30 天的 Coding Plan 用量明细
+            val cal = Calendar.getInstance()
+            val endDate = dateFormat.format(cal.time)
+            cal.add(Calendar.DAY_OF_YEAR, -30)
+            val startDate = dateFormat.format(cal.time)
+
+            val detailsResult = arkApiClient.getUsageDetails(
+                startDate = startDate,
+                endDate = endDate,
+                interval = "Day",
+                objectNames = CODING_PLAN_MODELS
+            )
+
+            val details = detailsResult.getOrNull()?.details ?: emptyList()
+
+            // 按日期聚合
+            val dailyMap = details.groupBy { detail ->
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(detail.time))
+                Pair(date, detail.objectName)
             }
 
-            val totalAFP = afp.afpMonthly.quota
-            val usedAFP = afp.afpMonthly.used
-            val usagePercentage = if (totalAFP > 0) (usedAFP / totalAFP).toFloat() else 0f
+            // 计算 5h / 周 / 月 请求次数（不是 token 数）
+            val now = System.currentTimeMillis()
+            val fiveHoursAgo = now - 5L * 60 * 60 * 1000
+            val oneWeekAgo = now - 7L * 24 * 60 * 60 * 1000
+
+            val last5hCount = details.count { it.time >= fiveHoursAgo }
+            val lastWeekCount = details.count { it.time >= oneWeekAgo }
+            val lastMonthCount = details.size
+
+            // Coding Plan 套餐的请求次数配额（根据 planType 区分 Lite/Pro）
+            // Lite: 5h ~1200 次, 周 ~9000 次, 月 ~18000 次
+            // Pro: 5h ~6000 次, 周 ~45000 次, 月 ~90000 次
+            val (hourQuota, weekQuota, monthQuota) = when (plan.planType.uppercase()) {
+                "PRO" -> Triple(6000.0, 45000.0, 90000.0)
+                else  -> Triple(1200.0, 9000.0, 18000.0)  // Lite 默认
+            }
+
+            val hourUsed = last5hCount.toDouble()
+            val weekUsed = lastWeekCount.toDouble()
+            val monthUsed = lastMonthCount.toDouble()
+
+            // 使用率（百分比）
+            val hourPct = if (hourQuota > 0) (hourUsed / hourQuota * 100).coerceIn(0.0, 100.0) else 0.0
+            val weekPct = if (weekQuota > 0) (weekUsed / weekQuota * 100).coerceIn(0.0, 100.0) else 0.0
+            val monthPct = if (monthQuota > 0) (monthUsed / monthQuota * 100).coerceIn(0.0, 100.0) else 0.0
 
             Result.success(
                 ArkPlanOverview(
@@ -132,15 +193,18 @@ class ArkRepository @Inject constructor(
                     startTime = plan.startTime,
                     endTime = plan.endTime,
                     autoRenew = plan.autoRenew,
-                    totalAFP = totalAFP,
-                    usedAFP = usedAFP,
-                    usagePercentage = usagePercentage,
-                    afp5hQuota = afp.afpFiveHour.quota,
-                    afp5hUsed = afp.afpFiveHour.used,
-                    afp1wQuota = afp.afpWeekly.quota,
-                    afp1wUsed = afp.afpWeekly.used,
-                    afp1mQuota = afp.afpMonthly.quota,
-                    afp1mUsed = afp.afpMonthly.used,
+                    totalAFP = monthQuota,
+                    usedAFP = monthUsed,
+                    usagePercentage = (monthPct / 100).toFloat(),
+                    afp5hQuota = hourQuota,
+                    afp5hUsed = hourUsed,
+                    afp5hPercent = hourPct,
+                    afp1wQuota = weekQuota,
+                    afp1wUsed = weekUsed,
+                    afp1wPercent = weekPct,
+                    afp1mQuota = monthQuota,
+                    afp1mUsed = monthUsed,
+                    afp1mPercent = monthPct,
                     planSource = "CodingPlan"
                 )
             )

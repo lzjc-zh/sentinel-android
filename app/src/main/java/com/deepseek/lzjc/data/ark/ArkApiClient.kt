@@ -64,14 +64,16 @@ class ArkApiClient @Inject constructor(
     suspend fun getUsageDetails(
         startDate: String,
         endDate: String,
-        interval: String = "Day"
+        interval: String = "Day",
+        objectNames: List<String>? = null
     ): Result<UsageDetailsResult> {
         return try {
             val request = GetUsageDetailsRequest(
                 queryInterval = interval,
                 filter = UsageFilter(
                     startTime = startDate,
-                    endTime = endDate
+                    endTime = endDate,
+                    objectName = objectNames
                 )
             )
             val body = gson.toJson(request)
