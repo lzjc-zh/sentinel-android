@@ -167,7 +167,8 @@ class ArkRepository @Inject constructor(
                 startDate = startDate,
                 endDate = endDate,
                 interval = "Day",
-                objectNames = CODING_PLAN_MODELS
+                objectNames = CODING_PLAN_MODELS,
+                planTypes = listOf(5, 6)
             )
 
             val details = detailsResult.getOrNull()?.details ?: emptyList()
