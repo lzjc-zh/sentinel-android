@@ -167,15 +167,33 @@ class ArkRepository @Inject constructor(
                 startDate = startDate,
                 endDate = endDate,
                 interval = "Day",
-                objectNames = CODING_PLAN_MODELS,
-                planTypes = listOf(5, 6)
+                objectNames = CODING_PLAN_MODELS
             )
 
             val details = detailsResult.getOrNull()?.details ?: emptyList()
 
-            // 5h 滑动窗口：当前时间往前 5 小时内的调用次数
-            val fiveHoursAgo = now - 5L * 60 * 60 * 1000
-            val last5hCount = details.count { it.time >= fiveHoursAgo }
+            // 5h 滑动窗口：Coding Plan 的 5h 周期从首次调用时间开始
+            // 用 SubscribeTime（订阅首次调用时间）作为基准，每 5h 一个周期
+            val fiveHourMs = 5L * 60 * 60 * 1000
+            // 找到 details 里最早的 minimax-m3/glm/doubao-seed 等 Coding Plan 专属模型调用时间
+            // auto/deepseek-embedding 不算（可能是 Agent Plan 复用）
+            val codingModels = setOf(
+                "minimax-m3", "minimax-m2.7", "glm-5.3", "glm-5.2",
+                "doubao-seed-2.0-code", "doubao-seed-code", "doubao-seed-2.0-lite",
+                "doubao-seed-2.1-turbo", "kimi-k2.6", "kimi-k2.7-code",
+                "deepseek-v4-flash-ga-260731", "deepseek-v4-pro-260425"
+            )
+            // 取 Coding Plan 开通时间之后最早的调用
+            val firstCodingCallTime = details
+                .filter { it.objectName in codingModels && it.time >= startMs }
+                .minOfOrNull { it.time } ?: startMs
+            val currentPeriodStart = if (firstCodingCallTime > 0 && firstCodingCallTime <= now) {
+                val elapsed = now - firstCodingCallTime
+                val periods = elapsed / fiveHourMs
+                firstCodingCallTime + periods * fiveHourMs
+            } else now
+            val currentPeriodEnd = currentPeriodStart + fiveHourMs
+            val last5hCount = details.count { it.time in currentPeriodStart until currentPeriodEnd }
 
             // 周限额：从本周一 00:00 算起（ISO 8601 周一开始）
             val weekStart = Calendar.getInstance().apply {
