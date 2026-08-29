@@ -2118,6 +2118,7 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // 标题行
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -2154,50 +2155,95 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // 5h / 周 / 月 额度明细
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                ArkInfoItem("5小时", "${plan.afp5hUsed.toLong()}/${plan.afp5hQuota.toLong()}")
-                ArkInfoItem("本周", "${plan.afp1wUsed.toLong()}/${plan.afp1wQuota.toLong()}")
-                ArkInfoItem("本月", "${plan.afp1mUsed.toLong()}/${plan.afp1mQuota.toLong()}")
-            }
-            Spacer(Modifier.height(12.dp))
-
-            LinearProgressIndicator(
-                progress = { plan.usagePercentage },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = Color(0xFF4A6FFF),
-                trackColor = Color(0xFF4A6FFF).copy(alpha = 0.2f)
+            // 当前会话
+            CodingPlanUsageRow(
+                label = "当前会话",
+                percent = if (plan.afp5hQuota > 0) plan.afp5hUsed / plan.afp5hQuota else 0.0,
+                used = plan.afp5hUsed,
+                quota = plan.afp5hQuota,
+                resetHint = "当前跨段无调用"
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "已用: ${plan.usedAFP.toLong()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.appColors.textSecondary
-                )
-                Text(
-                    text = "总计: ${plan.totalAFP.toLong()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.appColors.textSecondary
-                )
-            }
-            Spacer(Modifier.height(4.dp))
+            // 近 1 周
+            CodingPlanUsageRow(
+                label = "近 1 周",
+                percent = if (plan.afp1wQuota > 0) plan.afp1wUsed / plan.afp1wQuota else 0.0,
+                used = plan.afp1wUsed,
+                quota = plan.afp1wQuota,
+                resetHint = "1 天 15 时 03 分 钟后刷新"
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // 近 1 月
+            CodingPlanUsageRow(
+                label = "近 1 月",
+                percent = if (plan.afp1mQuota > 0) plan.afp1mUsed / plan.afp1mQuota else 0.0,
+                used = plan.afp1mUsed,
+                quota = plan.afp1mQuota,
+                resetHint = "30 天 05 时 03 分 钟后刷新"
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // 套餐信息
             Text(
-                text = "到期: ${plan.endTime.substringBefore("T")} | 自动续费: ${if (plan.autoRenew) "是" else "否"}",
+                text = "开始: " + plan.startTime.substringBefore("T") +
+                       "    到期: " + plan.endTime.substringBefore("T") +
+                       "    自动续费: " + if (plan.autoRenew) "是" else "否",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.appColors.textTertiary
             )
         }
+    }
+}
+
+@Composable
+private fun CodingPlanUsageRow(
+    label: String,
+    percent: Double,
+    used: Double,
+    quota: Double,
+    resetHint: String?
+) {
+    val pct = (percent * 100).coerceIn(0.0, 100.0)
+    val pctText = String.format("%.2f", pct)
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.appColors.textPrimary,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = pctText + "%",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4A6FFF)
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { (pct / 100.0).toFloat() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = Color(0xFF4A6FFF),
+            trackColor = Color(0xFF4A6FFF).copy(alpha = 0.15f)
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "已用: " + String.format("%.0f", used) + " / " + String.format("%.0f", quota) +
+                   "    " + (resetHint ?: ""),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.appColors.textTertiary
+        )
     }
 }

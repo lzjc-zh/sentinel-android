@@ -51,11 +51,11 @@ data class UsageFilter(
 // ===== 响应模型 =====
 
 data class PersonalPlanResult(
-    @SerializedName("PlanType") val planType: String,
-    @SerializedName("Status") val status: String,
-    @SerializedName("StartTime") val startTime: String,
-    @SerializedName("EndTime") val endTime: String,
-    @SerializedName("AutoRenew") val autoRenew: Boolean
+    @SerializedName("PlanType") val planType: String = "",
+    @SerializedName("Status") val status: String = "",
+    @SerializedName("StartTime") val startTime: String = "",
+    @SerializedName("EndTime") val endTime: String = "",
+    @SerializedName("AutoRenew") val autoRenew: Boolean = false
 )
 
 data class AFPUsageResult(
@@ -94,10 +94,11 @@ data class UsageDetailItem(
 // ===== 聚合展示数据 =====
 
 data class ArkPlanOverview(
-    val planType: String,
-    val status: String,
-    val endTime: String,
-    val autoRenew: Boolean,
+    val planType: String = "",
+    val status: String = "",
+    val startTime: String = "",
+    val endTime: String = "",
+    val autoRenew: Boolean = false,
     val totalAFP: Double = 0.0,
     val usedAFP: Double = 0.0,
     val usagePercentage: Float = 0f,

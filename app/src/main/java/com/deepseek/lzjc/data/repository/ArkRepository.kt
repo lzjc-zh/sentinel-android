@@ -87,6 +87,7 @@ class ArkRepository @Inject constructor(
                 ArkPlanOverview(
                     planType = plan.planType,
                     status = plan.status,
+                    startTime = plan.startTime,
                     endTime = plan.endTime,
                     autoRenew = plan.autoRenew,
                     totalAFP = totalAFP,
@@ -128,6 +129,7 @@ class ArkRepository @Inject constructor(
                 ArkPlanOverview(
                     planType = plan.planType,
                     status = plan.status,
+                    startTime = plan.startTime,
                     endTime = plan.endTime,
                     autoRenew = plan.autoRenew,
                     totalAFP = totalAFP,
