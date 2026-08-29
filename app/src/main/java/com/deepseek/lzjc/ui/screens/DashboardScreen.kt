@@ -2157,93 +2157,63 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
             }
             Spacer(Modifier.height(16.dp))
 
-            // 当前会话
-            CodingPlanUsageRow(
-                label = "当前会话",
-                percent = if (plan.afp5hQuota > 0) plan.afp5hUsed / plan.afp5hQuota else 0.0,
-                used = plan.afp5hUsed,
-                quota = plan.afp5hQuota,
-                resetHint = "当前跨段无调用"
-            )
-            Spacer(Modifier.height(12.dp))
-
-            // 近 1 周
-            CodingPlanUsageRow(
-                label = "近 1 周",
-                percent = if (plan.afp1wQuota > 0) plan.afp1wUsed / plan.afp1wQuota else 0.0,
-                used = plan.afp1wUsed,
-                quota = plan.afp1wQuota,
-                resetHint = "1 天 15 时 03 分 钟后刷新"
-            )
-            Spacer(Modifier.height(12.dp))
-
-            // 近 1 月
-            CodingPlanUsageRow(
-                label = "近 1 月",
-                percent = if (plan.afp1mQuota > 0) plan.afp1mUsed / plan.afp1mQuota else 0.0,
-                used = plan.afp1mUsed,
-                quota = plan.afp1mQuota,
-                resetHint = "30 天 05 时 03 分 钟后刷新"
-            )
+            // 套餐基础信息
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "开始时间",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    Text(
+                        text = plan.startTime.substringBefore("T"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.appColors.textPrimary
+                    )
+                }
+                Column {
+                    Text(
+                        text = "到期时间",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    Text(
+                        text = plan.endTime.substringBefore("T"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.appColors.textPrimary
+                    )
+                }
+                Column {
+                    Text(
+                        text = "自动续费",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textTertiary
+                    )
+                    Text(
+                        text = if (plan.autoRenew) "已开启" else "未开启",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.appColors.textPrimary
+                    )
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
-            // 套餐信息
-            Text(
-                text = "开始: " + plan.startTime.substringBefore("T") +
-                       "    到期: " + plan.endTime.substringBefore("T") +
-                       "    自动续费: " + if (plan.autoRenew) "是" else "否",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.appColors.textTertiary
-            )
+            // 提示信息：用量数据不可用
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFFF3E0), RoundedCornerShape(8.dp))
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "Coding Plan 订阅套餐。用量数据请在 火山方舟控制台 → 开通管理 → Coding Plan 页面查看，公共 API 未提供独立的 Coding Plan 用量查询接口。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFE65100)
+                )
+            }
         }
-    }
-}
-
-@Composable
-private fun CodingPlanUsageRow(
-    label: String,
-    percent: Double,
-    used: Double,
-    quota: Double,
-    resetHint: String?
-) {
-    val pct = (percent * 100).coerceIn(0.0, 100.0)
-    val pctText = String.format("%.2f", pct)
-
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.appColors.textPrimary,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = pctText + "%",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF4A6FFF)
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        LinearProgressIndicator(
-            progress = { (pct / 100.0).toFloat() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp),
-            color = Color(0xFF4A6FFF),
-            trackColor = Color(0xFF4A6FFF).copy(alpha = 0.15f)
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "已用: " + String.format("%.0f", used) + " / " + String.format("%.0f", quota) +
-                   "    " + (resetHint ?: ""),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.appColors.textTertiary
-        )
     }
 }
