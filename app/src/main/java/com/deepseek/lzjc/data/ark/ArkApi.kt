@@ -43,4 +43,15 @@ interface ArkApi {
         @Query("Version") version: String = "2024-01-01",
         @Body request: GetUsageDetailsRequest
     ): ArkResponse<UsageDetailsResult>
+
+    /**
+     * 测试 Coding Plan 用量查询（实验性）
+     */
+    @POST("/")
+    suspend fun getCodingPlanUsage(
+        @HeaderMap headers: Map<String, String>,
+        @Query("Action") action: String = "GetCodingPlanUsage",
+        @Query("Version") version: String = "2024-10-01",
+        @Body request: Any? = null
+    ): Any?
 }

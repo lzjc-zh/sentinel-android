@@ -2157,36 +2157,6 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
             }
             Spacer(Modifier.height(16.dp))
 
-            // 当前会话（5h）
-            CodingPlanUsageRow(
-                label = "当前会话",
-                percent = plan.afp5hPercent,
-                used = plan.afp5hUsed,
-                quota = plan.afp5hQuota,
-                resetHint = "5 小时滑动窗口"
-            )
-            Spacer(Modifier.height(12.dp))
-
-            // 近 1 周
-            CodingPlanUsageRow(
-                label = "近 1 周",
-                percent = plan.afp1wPercent,
-                used = plan.afp1wUsed,
-                quota = plan.afp1wQuota,
-                resetHint = "每周一 00:00 刷新"
-            )
-            Spacer(Modifier.height(12.dp))
-
-            // 近 1 月
-            CodingPlanUsageRow(
-                label = "近 1 月",
-                percent = plan.afp1mPercent,
-                used = plan.afp1mUsed,
-                quota = plan.afp1mQuota,
-                resetHint = "订阅月第 1 日 00:00 刷新"
-            )
-            Spacer(Modifier.height(16.dp))
-
             // 套餐基础信息
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2229,55 +2199,41 @@ private fun ArkCodingPlanCard(plan: com.deepseek.lzjc.data.ark.ArkPlanOverview) 
                     )
                 }
             }
+            Spacer(Modifier.height(16.dp))
+
+            // Coding Plan 额度说明
+            val (fiveH, weekly, monthly) = when (plan.planType.uppercase()) {
+                "PRO" -> Triple("6,000", "45,000", "90,000")
+                else  -> Triple("1,200", "9,000", "18,000")
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF4A6FFF).copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                    .padding(12.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "${plan.planType} 套餐额度",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4A6FFF)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "5h 滑动窗口：$fiveH 次\n每周：$weekly 次\n每月：$monthly 次",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appColors.textSecondary
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "用量数据请在火山方舟控制台 → 开通管理 → Coding Plan 页面查看精确百分比",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.appColors.textTertiary
+            )
         }
     }
 }
 
-@Composable
-private fun CodingPlanUsageRow(
-    label: String,
-    percent: Double,
-    used: Double,
-    quota: Double,
-    resetHint: String?
-) {
-    val pct = percent.coerceIn(0.0, 100.0)
-    val pctText = String.format("%.2f", pct)
-
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.appColors.textPrimary,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = pctText + "%",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF4A6FFF)
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        LinearProgressIndicator(
-            progress = { (pct / 100.0).toFloat() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp),
-            color = Color(0xFF4A6FFF),
-            trackColor = Color(0xFF4A6FFF).copy(alpha = 0.15f)
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "已用: " + String.format("%.0f", used) + " 次 / " + String.format("%.0f", quota) + " 次" +
-                   "    " + (resetHint ?: ""),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.appColors.textTertiary
-        )
-    }
-}
